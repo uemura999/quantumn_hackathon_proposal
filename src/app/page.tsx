@@ -54,14 +54,24 @@ export default function IntroPage() {
             QAOAのパラメータを動かすと、最適なルートが浮かび上がります。
           </p>
 
-          <div className="mt-10 flex flex-wrap gap-4">
+          <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link href="/tutorial">
-              <Button>チュートリアルへ進む →</Button>
+              <Button>👋 ハンズオンで始める →</Button>
             </Link>
-            <Link href="/challenge">
-              <Button variant="ghost">いきなりチャレンジ</Button>
+            <Link
+              href="/challenge"
+              className="text-sm underline"
+              style={{ color: 'var(--color-muted)' }}
+            >
+              知ってる人はここから（チャレンジ）
             </Link>
           </div>
+          <p
+            className="mt-4 text-xs"
+            style={{ color: 'var(--color-muted)', lineHeight: 1.7 }}
+          >
+            初めての人向けに、γ・β・reps の意味を体で覚える 7 ステップを用意しました。所要 10〜15 分。
+          </p>
         </div>
 
         <Panel>

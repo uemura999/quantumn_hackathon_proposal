@@ -335,8 +335,15 @@ export const glossary = {
 | 1 | Foundation: setup + HUD + 4画面骨格 | ✅ 完了 |
 | 2 | 量子エンジン TDD（32 tests / 96% coverage） | ✅ 完了 |
 | 3 | WebGL 都市 + コアループ + Glossary + 3段階ヒント | ✅ 完了 |
-| 4 | Result/Intro/演出 完全版 | 今回スコープ外 |
+| 4-edu | 教育レイヤー: 7ステップウィザード + 手動ルートモード + マップラベル + 実行ナレーション | ✅ 完了 |
 | 5 | Qiskit `/api/qaoa` 連携 | 今回スコープ外 |
+
+### Phase 4-edu の学習設計
+- **比喩 → 体験 → 言葉** の順で 1 ステップ 1 概念
+- `src/lib/metaphors.ts` に高校生向けストーリー（γ=磁石、β=ブレスト、reps=考え直す回数）
+- Step 1 で手動ルートモード（24 通り全列挙して順位算出は `src/lib/manualScoring.ts`）
+- マップ上の `drei <Html>` ラベルで物体が常時識別可能
+- Challenge 実行時に 3 ステップオーバーレイ（重ね合わせ → 採点 → 測定）
 
 ---
 

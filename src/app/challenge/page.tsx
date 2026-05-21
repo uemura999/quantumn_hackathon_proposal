@@ -11,6 +11,8 @@ import { HintPanel } from '@/components/hints/HintPanel';
 import { MiniGuide } from '@/components/hints/MiniGuide';
 import { GlossaryTooltip } from '@/components/hints/GlossaryTooltip';
 import { Confetti } from '@/components/ui/Confetti';
+import { MiniLegend } from '@/components/ui/MiniLegend';
+import { ExecutionNarration } from '@/components/challenge/ExecutionNarration';
 import { runQaoa } from '@/engine/qaoa';
 import { defaultCityProblem } from '@/engine/tsp';
 import type { QaoaResult, RouteCandidate } from '@/engine/types';
@@ -34,10 +36,12 @@ export default function ChallengePage() {
   const [truckRoute, setTruckRoute] = useState<RouteCandidate | null>(null);
   const [truckRunning, setTruckRunning] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
+  const [narrationTrigger, setNarrationTrigger] = useState(0);
 
   const onExecute = (): void => {
     setPulsing(true);
     setTruckRunning(false);
+    setNarrationTrigger((t) => t + 1);
     // Defer to next tick to let the pulse render before the synchronous QAOA.
     window.setTimeout(() => {
       const next = runQaoa(problem, {
@@ -63,6 +67,11 @@ export default function ChallengePage() {
   return (
     <section className="mx-auto max-w-screen-2xl px-6 py-8">
       <Confetti trigger={confettiTrigger} />
+      <ExecutionNarration
+        trigger={narrationTrigger}
+        gamma={params.gamma}
+        reps={params.reps}
+      />
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -97,11 +106,13 @@ export default function ChallengePage() {
               truckRunning={truckRunning}
               pulsing={pulsing}
               onTruckComplete={onTruckComplete}
+              showLabels
             />
           </div>
         </Panel>
 
         <div className="flex flex-col gap-4">
+          <MiniLegend />
           <Panel>
             <h2 className="font-semibold mb-4">パラメータ</h2>
             <ParameterSliders />

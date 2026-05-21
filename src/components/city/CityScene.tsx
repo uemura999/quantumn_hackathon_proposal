@@ -4,7 +4,9 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
 import { CityGrid } from './CityGrid';
+import { CityLabels } from './CityLabels';
 import { DeliveryPins } from './DeliveryPins';
+import { ManualRouteLine } from './ManualRouteLine';
 import { ProbabilityFog } from './ProbabilityFog';
 import { Truck } from './Truck';
 import type { CityProblem, RouteCandidate } from '@/engine/types';
@@ -16,6 +18,11 @@ interface CitySceneProps {
   readonly truckRunning: boolean;
   readonly pulsing: boolean;
   readonly onTruckComplete?: () => void;
+  readonly showLabels?: boolean;
+  readonly visitedIds?: ReadonlySet<number>;
+  readonly nextPickId?: number | null;
+  readonly onPinClick?: (deliveryId: number) => void;
+  readonly manualRouteOrder?: ReadonlyArray<number>;
 }
 
 export function CityScene({
@@ -25,6 +32,11 @@ export function CityScene({
   truckRunning,
   pulsing,
   onTruckComplete,
+  showLabels = false,
+  visitedIds,
+  nextPickId,
+  onPinClick,
+  manualRouteOrder,
 }: CitySceneProps) {
   return (
     <Canvas
@@ -46,12 +58,27 @@ export function CityScene({
         <hemisphereLight intensity={0.25} groundColor="#3A4564" />
 
         <CityGrid />
-        <DeliveryPins problem={problem} />
+        <DeliveryPins
+          problem={problem}
+          visitedIds={visitedIds}
+          nextPickId={nextPickId}
+          onPinClick={onPinClick}
+        />
+        {showLabels && (
+          <CityLabels
+            problem={problem}
+            highlightedIds={visitedIds}
+            nextPickId={nextPickId ?? null}
+          />
+        )}
         <ProbabilityFog
           problem={problem}
           distribution={distribution}
           pulsing={pulsing}
         />
+        {manualRouteOrder && manualRouteOrder.length > 0 && (
+          <ManualRouteLine problem={problem} order={manualRouteOrder} />
+        )}
         <Truck
           problem={problem}
           route={truckRoute}
