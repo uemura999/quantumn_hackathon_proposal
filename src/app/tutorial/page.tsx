@@ -1,11 +1,31 @@
+'use client';
+
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
+import { GlossaryTooltip } from '@/components/hints/GlossaryTooltip';
+import { runQaoa } from '@/engine/qaoa';
+import { defaultCityProblem } from '@/engine/tsp';
+import type { QaoaResult } from '@/engine/types';
+
+const CityScene = dynamic(
+  () => import('@/components/city/CityScene').then((m) => m.CityScene),
+  { ssr: false },
+);
 
 export default function TutorialPage() {
+  const problem = useMemo(() => defaultCityProblem(), []);
+  const [result, setResult] = useState<QaoaResult | null>(null);
+
+  const run = (gamma: number, beta: number): void => {
+    setResult(runQaoa(problem, { gamma, beta, reps: 2 }));
+  };
+
   return (
-    <section className="mx-auto max-w-screen-xl px-6 py-12">
-      <header className="mb-8">
+    <section className="mx-auto max-w-screen-xl px-6 py-10 space-y-8">
+      <header>
         <p
           className="mb-2 text-sm uppercase tracking-[0.3em]"
           style={{ color: 'var(--color-accent-strong)' }}
@@ -15,44 +35,57 @@ export default function TutorialPage() {
         <h1
           className="font-bold leading-tight"
           style={{
-            fontSize: 'clamp(1.8rem, 1rem + 2vw, 2.8rem)',
+            fontSize: 'clamp(1.6rem, 1rem + 2vw, 2.4rem)',
             fontFamily: 'var(--font-display)',
           }}
         >
-          まず手で解いてみよう、それから量子に渡そう。
+          まず眺めてみよう、それから動かしてみよう。
         </h1>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <Panel style={{ padding: 0 }} className="overflow-hidden">
+        <div className="h-[50vh] min-h-[360px] w-full">
+          <CityScene
+            problem={problem}
+            distribution={result?.distribution ?? []}
+            truckRoute={result?.bestValid ?? null}
+            truckRunning={false}
+            pulsing={false}
+          />
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 md:grid-cols-3">
         <Panel>
-          <h2 className="font-semibold text-lg mb-2">手動ルートモード</h2>
-          <p
-            className="text-sm"
-            style={{ color: 'var(--color-ink-soft)', lineHeight: 1.7 }}
-          >
-            配送地点をクリックして、自分の手で最短ルートを探してみます。
-            「人間が最適化するのは意外と難しい」ことに気付くのがゴール。
+          <h3 className="font-semibold mb-1">弱い <GlossaryTooltip k="gamma" /></h3>
+          <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
+            様々なルートに薄い「もや」が広がる、まだ <GlossaryTooltip k="superposition" /> の状態。
           </p>
-          <p className="mt-4 text-xs" style={{ color: 'var(--color-muted)' }}>
-            ※ Phase 3 で 3D マップとして実装されます。
-          </p>
+          <Button className="mt-3 w-full" variant="ghost" onClick={() => run(0.3, 0.3)}>
+            実行 γ=0.3
+          </Button>
         </Panel>
         <Panel>
-          <h2 className="font-semibold text-lg mb-2">初めての QAOA</h2>
-          <p
-            className="text-sm"
-            style={{ color: 'var(--color-ink-soft)', lineHeight: 1.7 }}
-          >
-            γ と β のスライダーを動かすと、街に確率の「もや」が浮かびます。
-            良いパラメータを見つけると、最短ルートが鮮やかに光ります。
+          <h3 className="font-semibold mb-1">ちょうどよい設定</h3>
+          <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
+            短いルートが少しずつ光ってきます。
           </p>
-          <p className="mt-4 text-xs" style={{ color: 'var(--color-muted)' }}>
-            ※ Phase 3 で確率フォグ + トラック走行が動きます。
+          <Button className="mt-3 w-full" variant="ghost" onClick={() => run(1.0, 0.4)}>
+            実行 γ=1.0, β=0.4
+          </Button>
+        </Panel>
+        <Panel>
+          <h3 className="font-semibold mb-1">強すぎる <GlossaryTooltip k="gamma" /></h3>
+          <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
+            <GlossaryTooltip k="interference" /> が暴れて、ルートがちらつきます。
           </p>
+          <Button className="mt-3 w-full" variant="ghost" onClick={() => run(2.8, 0.6)}>
+            実行 γ=2.8
+          </Button>
         </Panel>
       </div>
 
-      <div className="mt-10 flex justify-end">
+      <div className="flex justify-end">
         <Link href="/challenge">
           <Button>本番チャレンジへ →</Button>
         </Link>

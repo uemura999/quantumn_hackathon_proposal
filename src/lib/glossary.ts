@@ -4,7 +4,7 @@ export interface GlossaryEntry {
   readonly detail?: string;
 }
 
-export const glossary = {
+export const glossary: Record<string, GlossaryEntry> = {
   qaoa: {
     label: 'QAOA',
     summary:
@@ -52,6 +52,15 @@ export const glossary = {
     summary:
       'すべての地点を一度ずつ訪れて出発地に戻る、最短ルートを求める問題。',
   },
-} as const satisfies Record<string, GlossaryEntry>;
+};
 
-export type GlossaryKey = keyof typeof glossary;
+export type GlossaryKey =
+  | 'qaoa'
+  | 'superposition'
+  | 'gamma'
+  | 'beta'
+  | 'reps'
+  | 'hamiltonian'
+  | 'interference'
+  | 'measurement'
+  | 'tsp';

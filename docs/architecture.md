@@ -332,9 +332,9 @@ export const glossary = {
 
 | Phase | 範囲 | ステータス |
 |-------|------|----------|
-| 1 | Foundation: setup + HUD + 4画面骨格 | 進行中 |
-| 2 | 量子エンジン TDD | 未着手 |
-| 3 | WebGL 都市 + コアループ + Glossary + 簡易ヒント | 未着手 |
+| 1 | Foundation: setup + HUD + 4画面骨格 | ✅ 完了 |
+| 2 | 量子エンジン TDD（32 tests / 96% coverage） | ✅ 完了 |
+| 3 | WebGL 都市 + コアループ + Glossary + 3段階ヒント | ✅ 完了 |
 | 4 | Result/Intro/演出 完全版 | 今回スコープ外 |
 | 5 | Qiskit `/api/qaoa` 連携 | 今回スコープ外 |
 
