@@ -1,0 +1,45 @@
+:root {
+  --color-bg: oklch(94% 0.012 80);
+  --color-bg-soft: oklch(96% 0.008 80);
+  --color-surface: oklch(98% 0.005 80);
+  --color-ink: oklch(20% 0.04 260);
+  --color-ink-soft: oklch(35% 0.03 260);
+  --color-muted: oklch(60% 0.018 260);
+  --color-accent: oklch(70% 0.14 50);
+  --color-accent-strong: oklch(60% 0.16 45);
+  --color-glow: oklch(85% 0.18 90);
+  --color-route: oklch(72% 0.16 60);
+  --color-line: oklch(80% 0.01 260);
+
+  --font-sans: var(--font-noto-jp), system-ui, -apple-system, 'Hiragino Sans',
+    'Yu Gothic UI', sans-serif;
+  --font-display: var(--font-noto-jp), 'Hiragino Mincho ProN',
+    'Yu Mincho', serif;
+
+  --text-hud: clamp(0.95rem, 0.85rem + 0.4vw, 1.15rem);
+  --text-score: clamp(1.6rem, 1rem + 1.6vw, 2.4rem);
+  --text-hero: clamp(2.2rem, 1.2rem + 4vw, 4.5rem);
+
+  --space-hud: clamp(0.75rem, 0.5rem + 0.8vw, 1.5rem);
+  --radius-card: 0.875rem;
+  --radius-pill: 999px;
+
+  --shadow-hud: 0 8px 30px -12px oklch(20% 0.04 260 / 0.18);
+  --shadow-card: 0 12px 40px -16px oklch(20% 0.04 260 / 0.22);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 320ms;
+  --duration-slow: 600ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
