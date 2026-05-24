@@ -5,6 +5,8 @@ export interface BestScore {
   readonly distance: number;
   readonly route: ReadonlyArray<number>;
   readonly params: QaoaParams;
+  readonly distanceRank: number;
+  readonly trafficProfile: string;
 }
 
 export interface AttemptRecord {
@@ -12,7 +14,12 @@ export interface AttemptRecord {
   readonly timestamp: number;
   readonly params: QaoaParams;
   readonly bestValid: RouteCandidate | null;
+  readonly sampledRoute: RouteCandidate | null;
   readonly isNewBest: boolean;
+  readonly deltaFromBest: number | null;
+  readonly topAmplification: number;
+  readonly uniformProbability: number;
+  readonly trafficProfile: string;
 }
 
 interface SessionState {
@@ -20,7 +27,10 @@ interface SessionState {
   readonly bestScore: BestScore | null;
   readonly history: ReadonlyArray<AttemptRecord>;
   startSession: () => void;
-  recordAttempt: (result: QaoaResult) => { isNewBest: boolean };
+  recordAttempt: (
+    result: QaoaResult,
+    sampledRoute?: RouteCandidate | null,
+  ) => { isNewBest: boolean; deltaFromBest: number | null };
   resetSession: () => void;
 }
 
@@ -35,18 +45,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set((s) => ({ ...s, startedAt: Date.now() }));
   },
 
-  recordAttempt: (result) => {
+  recordAttempt: (result, sampledRoute = null) => {
     const candidate = result.bestValid;
     const current = get().bestScore;
     const isNewBest =
       candidate !== null &&
       (current === null || candidate.distance < current.distance);
+    const comparisonBest = current?.distance ?? candidate?.distance ?? null;
+    const deltaFromBest =
+      candidate !== null && comparisonBest !== null
+        ? candidate.distance - comparisonBest
+        : null;
 
     const nextBest: BestScore | null = isNewBest && candidate
       ? {
           distance: candidate.distance,
           route: candidate.order,
           params: result.params,
+          distanceRank: candidate.distanceRank,
+          trafficProfile: result.trafficProfile,
         }
       : current;
 
@@ -55,7 +72,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       timestamp: Date.now(),
       params: result.params,
       bestValid: candidate,
+      sampledRoute,
       isNewBest,
+      deltaFromBest,
+      topAmplification: result.topAmplification,
+      uniformProbability: result.uniformProbability,
+      trafficProfile: result.trafficProfile,
     };
 
     set((s) => ({
@@ -64,7 +86,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       history: [...s.history, record],
     }));
 
-    return { isNewBest };
+    return { isNewBest, deltaFromBest };
   },
 
   resetSession: () => {

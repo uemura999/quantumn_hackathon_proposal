@@ -10,7 +10,7 @@ export function ScoreCard() {
   return (
     <div className="flex flex-col items-end leading-tight">
       <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
-        Best Distance
+        Best Route
       </span>
       <span
         className="font-mono tabular-nums"
@@ -21,7 +21,7 @@ export function ScoreCard() {
             : 'var(--color-ink-soft)',
         }}
       >
-        {bestScore ? formatDistance(bestScore.distance) : '— u'}
+        {bestScore ? formatDistance(bestScore.distance) : '— 距離pt'}
       </span>
       <span className="text-[0.75rem] text-[color:var(--color-muted)] mt-0.5">
         試行 {attempts} 回

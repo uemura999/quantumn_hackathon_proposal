@@ -49,9 +49,9 @@ export default function IntroPage() {
           >
             街を走る配送トラックの最短ルートを、
             <br className="hidden md:inline" />
-            <strong>量子の重ね合わせ</strong>でひらく2時間。
+            <strong>たくさんの候補を同時に比べる考え方</strong>で探す2時間。
             <br />
-            QAOAのパラメータを動かすと、最適なルートが浮かび上がります。
+            3つのつまみを動かすと、良さそうなルートが浮かび上がります。
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -70,7 +70,7 @@ export default function IntroPage() {
             className="mt-4 text-xs"
             style={{ color: 'var(--color-muted)', lineHeight: 1.7 }}
           >
-            初めての人向けに、γ・β・reps の意味を体で覚える 7 ステップを用意しました。所要 10〜15 分。
+            初めての人向けに、短さの好み・混ぜる強さ・考え直す回数を体で覚える 7 ステップを用意しました。所要 10〜15 分。
           </p>
         </div>
 
@@ -83,12 +83,12 @@ export default function IntroPage() {
           </h2>
           <ol className="space-y-4">
             {[
-              ['01', '街と量子に触れる', 'タイトル + 30秒の量子コイン投げ'],
-              ['02', '手で解く × 量子で解く', '手動ルートとQAOAを比較'],
+              ['01', '街と問題に触れる', '配送先と渋滞を見る'],
+              ['02', '手で解く × 計算で解く', '手動ルートと候補バーを比較'],
               [
                 '03',
                 'チームでスコアを縮める',
-                'γ / β / reps を調整して最短ルートを探す',
+                '3つのつまみを調整して最短ルートを探す',
               ],
               ['04', '結果発表', 'ベストルートと工夫を共有'],
             ].map(([num, title, sub]) => (

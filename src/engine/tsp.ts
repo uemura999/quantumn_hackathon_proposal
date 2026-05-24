@@ -1,4 +1,11 @@
-import type { CityProblem, DeliveryPoint } from './types';
+import {
+  buildCityLayout,
+  computeShortestPaths,
+  deliveriesFromLayout,
+  depotPoint,
+  type TrafficProfileName,
+} from './city-layout';
+import type { CityProblem } from './types';
 
 export const DEPOT_INDEX = -1;
 
@@ -71,16 +78,19 @@ export function routeFromPermutation(
   return [DEPOT_INDEX, ...permutation, DEPOT_INDEX];
 }
 
-const DEFAULT_DELIVERIES: ReadonlyArray<DeliveryPoint> = [
-  { id: 0, label: '北倉庫', x: -3, y: 4 },
-  { id: 1, label: '中央駅', x: 3, y: 3 },
-  { id: 2, label: '南マーケット', x: -2, y: -3 },
-  { id: 3, label: '東モール', x: 4, y: -2 },
-];
+export function buildCityProblem(
+  profile: TrafficProfileName = 'midday',
+): CityProblem {
+  const layout = buildCityLayout(profile);
+  const shortestPaths = computeShortestPaths(layout.graph, layout.graph.edges);
+  return {
+    depot: depotPoint(layout),
+    deliveries: deliveriesFromLayout(layout),
+    layout,
+    shortestPaths,
+  };
+}
 
 export function defaultCityProblem(): CityProblem {
-  return {
-    depot: { x: 0, y: 0 },
-    deliveries: DEFAULT_DELIVERIES,
-  };
+  return buildCityProblem('midday');
 }

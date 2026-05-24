@@ -44,13 +44,24 @@ export function GlossaryTooltip({ k, children }: GlossaryTooltipProps) {
         >
           <strong className="block mb-1">{entry.label}</strong>
           {entry.summary}
-          {entry.detail && (
-            <span
-              className="mt-2 block text-xs"
-              style={{ color: 'oklch(70% 0.02 260)' }}
+          {(entry.mechanism || entry.detail) && (
+            <details
+              className="mt-2 text-xs"
+              style={{ color: 'oklch(82% 0.04 180)' }}
             >
-              {entry.detail}
-            </span>
+              <summary className="cursor-pointer font-semibold">
+                もう少し詳しく
+              </summary>
+              {entry.mechanism && <span className="mt-1 block">{entry.mechanism}</span>}
+              {entry.detail && (
+                <span
+                  className="mt-1 block text-[11px]"
+                  style={{ color: 'oklch(70% 0.02 260)' }}
+                >
+                  {entry.detail}
+                </span>
+              )}
+            </details>
           )}
         </span>
       )}

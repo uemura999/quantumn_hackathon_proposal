@@ -7,22 +7,56 @@ export function segmentDistance(a: Point2D, b: Point2D): number {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+function nodeIdForRouteIndex(
+  problem: CityProblem,
+  index: number,
+): string {
+  if (index === DEPOT_INDEX) return problem.layout.depotNodeId;
+  const delivery = problem.deliveries.find((d) => d.id === index);
+  if (!delivery) {
+    throw new Error(`unknown delivery id ${index}`);
+  }
+  return delivery.nodeId;
+}
+
 export function routeDistance(
   problem: CityProblem,
   route: ReadonlyArray<number>,
 ): number {
   const inner = stripDepotSentinels(route);
-  let total = 0;
-  let prev: Point2D = problem.depot;
-  for (const deliveryId of inner) {
-    const point = problem.deliveries.find((d) => d.id === deliveryId);
-    if (!point) {
-      throw new Error(`unknown delivery id ${deliveryId}`);
-    }
-    total += segmentDistance(prev, point);
-    prev = point;
+  if (inner.length === 0) return 0;
+
+  const nodeSequence: string[] = [problem.layout.depotNodeId];
+  for (const idx of inner) {
+    nodeSequence.push(nodeIdForRouteIndex(problem, idx));
   }
-  total += segmentDistance(prev, problem.depot);
+  nodeSequence.push(problem.layout.depotNodeId);
+
+  let total = 0;
+  for (let i = 1; i < nodeSequence.length; i++) {
+    const from = nodeSequence[i - 1];
+    const to = nodeSequence[i];
+    const row = problem.shortestPaths.distance.get(from);
+    if (!row) throw new Error(`shortest path row missing for ${from}`);
+    const d = row.get(to);
+    if (d === undefined || !Number.isFinite(d)) {
+      throw new Error(`no path from ${from} to ${to}`);
+    }
+    total += d;
+  }
+  return total;
+}
+
+export function euclideanRouteDistance(
+  depot: Point2D,
+  ordered: ReadonlyArray<Point2D>,
+): number {
+  if (ordered.length === 0) return 0;
+  let total = segmentDistance(depot, ordered[0]);
+  for (let i = 1; i < ordered.length; i++) {
+    total += segmentDistance(ordered[i - 1], ordered[i]);
+  }
+  total += segmentDistance(ordered[ordered.length - 1], depot);
   return total;
 }
 

@@ -56,7 +56,7 @@ export function Step1Manual({ problem, CityScene }: StepBaseProps) {
           className="text-sm mb-4"
           style={{ color: 'var(--color-ink-soft)', lineHeight: 1.75 }}
         >
-          配送先のピンを<strong>順番にクリック</strong>して、自分なりの最短ルートを作ってみてください。倉庫からスタートして、4 つ全部を回って、倉庫に戻ります。
+          配送先のピンを<strong>順番にクリック</strong>して、自分なりの最短ルートを作ってみてください。倉庫からスタートして、{problem.deliveries.length} つ全部を回って、倉庫に戻ります。<span style={{ color: 'var(--color-muted)' }}>渋滞道は重く採点されます。</span>
         </p>
 
         <ol className="mb-4 space-y-2">

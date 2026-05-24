@@ -1,7 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Panel } from '@/components/ui/Panel';
+import { WavePanel } from '@/components/wave/WavePanel';
 import { runQaoa } from '@/engine/qaoa';
 import type { QaoaParams, QaoaResult } from '@/engine/types';
 import type { StepBaseProps } from './stepShared';
@@ -10,6 +12,7 @@ import type { Metaphor } from '@/lib/metaphors';
 interface Preset {
   readonly value: number;
   readonly label: string;
+  readonly hint?: string;
 }
 
 interface SoloSliderStepProps extends StepBaseProps {
@@ -23,6 +26,7 @@ interface SoloSliderStepProps extends StepBaseProps {
   readonly initial: number;
   readonly presets: ReadonlyArray<Preset>;
   readonly formatValue: (v: number) => string;
+  readonly extraWidget?: ReactNode | ((params: QaoaParams) => ReactNode);
 }
 
 export function SoloSliderStep({
@@ -37,6 +41,7 @@ export function SoloSliderStep({
   initial,
   presets,
   formatValue,
+  extraWidget,
 }: SoloSliderStepProps) {
   const [value, setValue] = useState(initial);
   const [result, setResult] = useState<QaoaResult | null>(null);
@@ -58,8 +63,10 @@ export function SoloSliderStep({
     return () => window.clearTimeout(id);
   }, [problem, params]);
 
+  const activePreset = presets.find((p) => Math.abs(value - p.value) < step / 2);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+    <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr_0.95fr]">
       <Panel style={{ padding: 0 }} className="overflow-hidden">
         <div className="h-[52vh] min-h-[380px] w-full">
           <CityScene
@@ -73,21 +80,35 @@ export function SoloSliderStep({
         </div>
       </Panel>
 
+      <div className="flex flex-col gap-4">
+        <WavePanel
+          problem={problem}
+          mode="frozen"
+          frozenDistribution={result?.distribution ?? []}
+          params={params}
+          showInterferenceHint={false}
+        />
+        {typeof extraWidget === 'function' ? extraWidget(params) : extraWidget}
+      </div>
+
       <Panel>
         <h2
           className="font-semibold mb-2"
-          style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)' }}
+          style={{ fontSize: '1.15rem', fontFamily: 'var(--font-display)' }}
         >
           {metaphor.headline}
         </h2>
         <p
-          className="text-sm mb-4"
-          style={{ color: 'var(--color-ink-soft)', lineHeight: 1.75 }}
+          className="text-sm mb-3"
+          style={{ color: 'var(--color-ink-soft)', lineHeight: 1.7 }}
         >
           {metaphor.story}
         </p>
 
-        <div className="rounded-lg p-3 mb-4" style={{ background: 'oklch(96% 0.012 80)' }}>
+        <div
+          className="rounded-lg p-3 mb-3"
+          style={{ background: 'oklch(96% 0.012 80)' }}
+        >
           <div className="flex justify-between mb-2">
             <span className="text-sm font-medium">スライダー</span>
             <span
@@ -130,7 +151,35 @@ export function SoloSliderStep({
               </button>
             ))}
           </div>
+          {activePreset?.hint && (
+            <p className="mt-2 text-[11px]" style={{ color: 'var(--color-muted)' }}>
+              💡 {activePreset.hint}
+            </p>
+          )}
         </div>
+
+        <details
+          className="rounded-lg p-3 mb-3 text-xs"
+          style={{
+            background: 'oklch(96% 0.018 200 / 0.4)',
+            border: '1px solid oklch(80% 0.04 200)',
+            color: 'var(--color-ink)',
+            lineHeight: 1.7,
+          }}
+        >
+          <summary
+            className="cursor-pointer font-semibold"
+            style={{ color: 'oklch(48% 0.12 230)' }}
+          >
+            なぜそうなる？(仕組みを見る)
+          </summary>
+          <p className="mt-2">{metaphor.mechanism}</p>
+          {metaphor.goldZone && (
+            <p className="mt-2" style={{ color: 'var(--color-accent-strong)' }}>
+              🟢 {metaphor.goldZone}
+            </p>
+          )}
+        </details>
 
         <p
           className="text-xs rounded-lg p-3"

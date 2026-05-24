@@ -8,6 +8,8 @@ import { CityLabels } from './CityLabels';
 import { DeliveryPins } from './DeliveryPins';
 import { ManualRouteLine } from './ManualRouteLine';
 import { ProbabilityFog } from './ProbabilityFog';
+import type { CandidateVisibility } from './ProbabilityFog';
+import { RoadNetwork } from './RoadNetwork';
 import { Truck } from './Truck';
 import type { CityProblem, RouteCandidate } from '@/engine/types';
 
@@ -15,32 +17,38 @@ interface CitySceneProps {
   readonly problem: CityProblem;
   readonly distribution: ReadonlyArray<RouteCandidate>;
   readonly truckRoute: RouteCandidate | null;
+  readonly selectedRoute?: RouteCandidate | null;
   readonly truckRunning: boolean;
   readonly pulsing: boolean;
   readonly onTruckComplete?: () => void;
   readonly showLabels?: boolean;
+  readonly showTraffic?: boolean;
   readonly visitedIds?: ReadonlySet<number>;
   readonly nextPickId?: number | null;
   readonly onPinClick?: (deliveryId: number) => void;
   readonly manualRouteOrder?: ReadonlyArray<number>;
+  readonly candidateVisibility?: CandidateVisibility;
 }
 
 export function CityScene({
   problem,
   distribution,
   truckRoute,
+  selectedRoute,
   truckRunning,
   pulsing,
   onTruckComplete,
   showLabels = false,
+  showTraffic = true,
   visitedIds,
   nextPickId,
   onPinClick,
   manualRouteOrder,
+  candidateVisibility = 'show',
 }: CitySceneProps) {
   return (
     <Canvas
-      camera={{ position: [0, 12, 14], fov: 35 }}
+      camera={{ position: [0, 20, 22], fov: 38 }}
       dpr={[1, 2]}
       shadows
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
@@ -49,7 +57,7 @@ export function CityScene({
       <Suspense fallback={null}>
         <ambientLight intensity={0.55} />
         <directionalLight
-          position={[6, 12, 4]}
+          position={[8, 14, 6]}
           intensity={1.1}
           color="#FFE9D0"
           castShadow
@@ -57,7 +65,14 @@ export function CityScene({
         />
         <hemisphereLight intensity={0.25} groundColor="#3A4564" />
 
-        <CityGrid />
+        <CityGrid
+          buildings={problem.layout.buildings}
+          bounds={problem.layout.bounds}
+        />
+        <RoadNetwork
+          graph={problem.layout.graph}
+          showTraffic={showTraffic}
+        />
         <DeliveryPins
           problem={problem}
           visitedIds={visitedIds}
@@ -74,7 +89,9 @@ export function CityScene({
         <ProbabilityFog
           problem={problem}
           distribution={distribution}
+          selectedRoute={selectedRoute ?? truckRoute}
           pulsing={pulsing}
+          candidateVisibility={candidateVisibility}
         />
         {manualRouteOrder && manualRouteOrder.length > 0 && (
           <ManualRouteLine problem={problem} order={manualRouteOrder} />
@@ -88,10 +105,10 @@ export function CityScene({
 
         <OrbitControls
           enablePan={false}
-          minPolarAngle={0.4}
-          maxPolarAngle={1.1}
-          minDistance={10}
-          maxDistance={22}
+          minPolarAngle={0.35}
+          maxPolarAngle={1.15}
+          minDistance={14}
+          maxDistance={34}
           enableDamping
           dampingFactor={0.08}
         />

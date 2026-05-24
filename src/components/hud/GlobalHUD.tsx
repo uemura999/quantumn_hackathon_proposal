@@ -13,6 +13,7 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: '/', label: 'Intro' },
   { href: '/tutorial', label: 'Tutorial' },
   { href: '/challenge', label: 'Challenge' },
+  { href: '/story', label: 'Story' },
   { href: '/result', label: 'Result' },
 ];
 

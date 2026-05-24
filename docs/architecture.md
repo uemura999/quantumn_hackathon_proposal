@@ -91,16 +91,21 @@ type AttemptRecord = {
   timestamp: number;
   params: QaoaParams;
   bestValid: RouteCandidate | null;
+  sampledRoute: RouteCandidate | null;
   isNewBest: boolean;
+  deltaFromBest: number | null;
+  topAmplification: number;
+  uniformProbability: number;
+  trafficProfile: string;
 };
 
 interface SessionState {
   startedAt: number | null;
-  bestScore: { distance: number; route: number[]; params: QaoaParams } | null;
+  bestScore: { distance: number; route: number[]; params: QaoaParams; distanceRank: number; trafficProfile: string } | null;
   history: ReadonlyArray<AttemptRecord>;
 
   startSession(): void;
-  recordAttempt(result: QaoaResult): { isNewBest: boolean };
+  recordAttempt(result: QaoaResult, sampledRoute?: RouteCandidate | null): { isNewBest: boolean; deltaFromBest: number | null };
   resetSession(): void;
 }
 ```
@@ -155,6 +160,8 @@ export interface RouteCandidate {
   order: ReadonlyArray<number>;   // depot を端に含む訪問順
   distance: number;
   probability: number;            // 0..1
+  distanceRank: number;           // 1..n!
+  deltaFromOptimal: number;
   isValid: boolean;
 }
 
@@ -163,6 +170,10 @@ export interface QaoaResult {
   bestValid: RouteCandidate | null;
   elapsedMs: number;
   params: QaoaParams;
+  trafficProfile: string;
+  uniformProbability: number;
+  topAmplification: number;
+  probabilityHistory: ReadonlyArray<ReadonlyArray<number>>;
 }
 
 export interface QaoaRunner {
@@ -174,28 +185,26 @@ export interface QaoaRunner {
 
 ```
 CityProblem
-   ↓ tsp.ts:problemToIsing
-Ising/QUBO 表現 (Pauli sum)
-   ↓ statevector.ts:initSuperposition (Hadamard 全 qubit)
-均等な重ね合わせ状態
-   ↓ qaoa.ts:applyCostHamiltonian(γ) → applyMixerHamiltonian(β)
+   ↓ tsp.ts:indexToPermutation
+720 通りの有効な訪問順だけを列挙
+   ↓ qaoa.ts:createUniformState
+均等な候補状態
+   ↓ qaoa.ts:applyPhaseDiagonal(γ) → applyPermutationMixer(β)
    ↓ × reps
 最終状態
-   ↓ statevector.ts:probabilities
-P(|x⟩)[]
-   ↓ tsp.ts:bitstringToRoute + scoring.ts:totalDistance
+   ↓ 確率に変換 + distanceRank / deltaFromOptimal を付与
 RouteCandidate[]
-   ↓ 確率降順 sort
+   ↓ 確率降順 sort (同率は短い距離を優先)
 QaoaResult
 ```
 
 ### 6.2 表現
 
-- 状態は `{ real: Float64Array; imag: Float64Array }` で長さ `2^n`
-- 4配送地点 + depot の TSP は **one-hot 符号化**で `n_qubits = 4 * 4 = 16`、配列長 65536（メモリ 1MB 程度、ブラウザで余裕）
-- ただし MVP では計算負荷を抑えるため **訪問順だけを並び替える 4! = 24 通り**を直接列挙する簡易モードも用意し、QAOA 結果を「24 個の順列に対する確率分布」へマッピングする実装を併用する（実装が単純で、教育目的に十分）
+- 状態は `{ real: Float64Array; imag: Float64Array }` で長さ `6! = 720`
+- MVP では無効ビット列を作らず、**訪問順だけを並び替える順列ベースの簡易 QAOA**で、すべての表示を有効ルート候補にそろえる
+- `sampleRouteCandidate()` は分布から今回取り出したルートをサンプリングし、セッションベスト判定は `bestValid`（波が推す 1 位候補）の距離で行う
 
-> **判断**: 真の one-hot QAOA はメモリ・計算量とも MVP には過剰。**順列ベースの簡易 QAOA**（4! 状態の cost Hamiltonian と mixer を 16qubits 相当の virtual state で表現）で「パラメータを動かすと最短ルートに収束する」体験を確実に再現する。Phase 4-5 で本格 one-hot 版へ拡張可能な型を維持。
+> **判断**: 真の one-hot QAOA は教育用 MVP には過剰。順列ベースにすることで、「調整中プレビュー」「実行結果」「今回取り出したルート」の表示を 720 個の有効候補だけで説明できる。
 
 ---
 
@@ -275,9 +284,9 @@ QaoaResult
 ### 3段階ヒント
 | Level | 例 |
 |-------|---|
-| 1 | "γ を増やすと分布が鋭くなります" |
-| 2 | "γ は 0.8〜1.2 あたりがよく効きます" |
-| 3 | "reps=2, γ≈1.0, β≈0.4 を試してみよう" |
+| 1 | "短さの好みを少し増やすと、短い候補に印がつきます" |
+| 2 | "短さの好みは 0.8〜1.2、混ぜる強さは 0.3〜0.5 あたりから試す" |
+| 3 | "考え直す回数=2、短さの好み≈1.0、混ぜる強さ≈0.4 から動かす" |
 
 操作なしが **90秒** 続いたら自動で Level 1 を表示。
 
@@ -293,8 +302,8 @@ export const glossary = {
     label: '重ね合わせ',
     summary: '複数の状態が同時に存在している量子の状態。'
   },
-  gamma: { label: 'γ (ガンマ)', summary: 'cost Hamiltonian の強さ。' },
-  beta: { label: 'β (ベータ)', summary: 'mixer Hamiltonian の強さ。' },
+  gamma: { label: '短さの好み (γ)', summary: '短いルートをどれくらい強く好きと伝えるか。' },
+  beta: { label: '混ぜる強さ (β)', summary: '候補どうしをどれくらい混ぜるか。' },
   // ...
 } as const;
 ```
@@ -328,7 +337,7 @@ export const glossary = {
 
 ---
 
-## 13. Phase スコープ（現在 = Phase 1-3 MVP）
+## 13. Phase スコープ（現在 = Phase 1-3 MVP + 5-quality）
 
 | Phase | 範囲 | ステータス |
 |-------|------|----------|
@@ -336,14 +345,52 @@ export const glossary = {
 | 2 | 量子エンジン TDD（32 tests / 96% coverage） | ✅ 完了 |
 | 3 | WebGL 都市 + コアループ + Glossary + 3段階ヒント | ✅ 完了 |
 | 4-edu | 教育レイヤー: 7ステップウィザード + 手動ルートモード + マップラベル + 実行ナレーション | ✅ 完了 |
-| 5 | Qiskit `/api/qaoa` 連携 | 今回スコープ外 |
+| 5-quality | 道路グラフ + 6 配送先 + 渋滞 + 候補バー + 成果ダッシュボード + 機構説明 | ✅ 完了 |
+| 6 | Qiskit `/api/qaoa` 連携 | スコープ外 |
 
 ### Phase 4-edu の学習設計
 - **比喩 → 体験 → 言葉** の順で 1 ステップ 1 概念
-- `src/lib/metaphors.ts` に高校生向けストーリー（γ=磁石、β=ブレスト、reps=考え直す回数）
-- Step 1 で手動ルートモード（24 通り全列挙して順位算出は `src/lib/manualScoring.ts`）
+- `src/lib/metaphors.ts` に高校生向けストーリー（短さの好み、混ぜる強さ、考え直す回数）
+- Step 1 で手動ルートモード（720 通り全列挙して順位算出は `src/lib/manualScoring.ts`）
 - マップ上の `drei <Html>` ラベルで物体が常時識別可能
-- Challenge 実行時に 3 ステップオーバーレイ（重ね合わせ → 採点 → 測定）
+- Challenge 実行時に 4 ステップオーバーレイ（候補を広げる → 短い道に印をつける → 候補を混ぜる → 1本取り出す）
+
+### Phase 5-quality の追加要素 (今回の改修)
+
+1. **道路グラフ + 6 配送先** (`src/engine/city-layout.ts`)
+   - 5×5 グリッド (25 ノード) + 40 エッジ
+   - 6 配送先を非中央ノードに配置、倉庫(中央)と道路で全連結
+   - `assertNoCollisions(layout)` で全オブジェクト 1.2u 以上分離を保証
+   - 距離は **Floyd-Warshall** で計算した道路最短経路 (`scoring.ts`)
+2. **渋滞モデル** (`TrafficLevel`: clear / light / moderate / heavy)
+   - エッジ毎に決定論的な渋滞レベル + 倍率 (1.0 / 1.25 / 1.7 / 2.4)
+   - 3 つの交通プロファイル (morning_rush / midday / evening_rush)
+   - `RoadNetwork.tsx` で色オーバーレイ表示
+   - Challenge では `昼 / 朝ラッシュ / 夕方ラッシュ` を切り替え可能
+3. **候補バー** (`src/components/wave/`)
+   - `WavePanel.tsx`: 候補の強さバー (√P で表現、差を強調)
+   - `InterferenceDemo.tsx`: 2 波の合成を SVG で可視化 (高校物理アナロジー)
+   - `LayerReplay.tsx`: QAOA レイヤー毎の確率履歴を再生
+4. **QAOA エンジン拡張**
+   - `runQaoa()` の戻り値に `probabilityHistory: number[][]` 追加
+   - `RouteCandidate` に `distanceRank` / `deltaFromOptimal` 追加
+   - `QaoaResult` に `uniformProbability` / `topAmplification` / `trafficProfile` 追加
+   - `sampleRouteCandidate()` で「今回取り出したルート」を表現
+   - レイヤー毎・位相付け/混ぜそれぞれのスナップショット
+5. **成果表示 + 教育の機構説明**
+   - Challenge 上部に「今回の成果」ダッシュボードを表示
+   - 距離、距離順位、最短との差、配送時間、確信度、前回との差を表示
+   - ルートが同じ場合は「訪問順は同じ、選ばれやすさが変化」と明示
+   - `glossary.ts` の `GlossaryEntry.mechanism` 追加
+   - `metaphors.ts` の `Metaphor.mechanism` / `goldZone` 追加
+   - `SoloSliderStep` に `<details>` 折りたたみの「なぜそうなる？」
+   - Step3 (γ) に `InterferenceDemo`、Step5 (reps) に `LayerReplay` 埋込
+
+### 衝突回避ルール
+- Pin (倉庫/配送先) は全て交差点に配置 → 道路と完全に整合
+- 建物は 4×4 = 16 ブロックの中心点に配置、`MIN_PIN_SEPARATION=1.5` 以下なら除外
+- 建物同士は `MIN_BUILDING_SEPARATION=1.2` 未満禁止
+- `city-layout.test.ts` で自動検証
 
 ---
 

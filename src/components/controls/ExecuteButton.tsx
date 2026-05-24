@@ -19,7 +19,7 @@ export function ExecuteButton({
       disabled={disabled || running}
       className="w-full mt-2"
     >
-      {running ? '量子計算中…' : '量子で実行 →'}
+      {running ? '候補を計算中…' : 'この設定で実行 →'}
     </Button>
   );
 }

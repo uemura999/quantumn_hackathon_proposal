@@ -2,6 +2,7 @@
 
 import { Html } from '@react-three/drei';
 import type { CityProblem } from '@/engine/types';
+import { useLabelStore } from '@/store/labelStore';
 
 interface CityLabelsProps {
   readonly problem: CityProblem;
@@ -50,6 +51,7 @@ export function CityLabels({
   highlightedIds,
   nextPickId,
 }: CityLabelsProps) {
+  const labelOverrides = useLabelStore((s) => s.labels);
   return (
     <group>
       <Html
@@ -71,6 +73,11 @@ export function CityLabels({
             : 'delivery';
         const icon = isHighlighted ? '✓' : isNext ? '👉' : '📦';
         const suffix = isHighlighted ? ' (済)' : isNext ? ' (次にクリック)' : '';
+        const customLabel = labelOverrides[d.id];
+        const effectiveLabel =
+          customLabel && customLabel.trim().length > 0
+            ? customLabel
+            : d.label;
         return (
           <Html
             key={d.id}
@@ -79,7 +86,7 @@ export function CityLabels({
             distanceFactor={10}
             zIndexRange={[100, 0]}
           >
-            <Label icon={icon} text={`${d.label}${suffix}`} variant={variant} />
+            <Label icon={icon} text={`${effectiveLabel}${suffix}`} variant={variant} />
           </Html>
         );
       })}

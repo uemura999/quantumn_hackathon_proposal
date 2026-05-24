@@ -14,6 +14,7 @@ describe('numPermutations', () => {
     expect(numPermutations(3)).toBe(6);
     expect(numPermutations(4)).toBe(24);
     expect(numPermutations(5)).toBe(120);
+    expect(numPermutations(6)).toBe(720);
   });
 });
 
@@ -40,6 +41,13 @@ describe('indexToPermutation / permutationToIndex (Lehmer code)', () => {
     }
     expect(seen.size).toBe(24);
   });
+
+  it('round-trips for all 720 permutations of size 6', () => {
+    for (let i = 0; i < 720; i++) {
+      const perm = indexToPermutation(i, 6);
+      expect(permutationToIndex(perm)).toBe(i);
+    }
+  });
 });
 
 describe('routeFromPermutation', () => {
@@ -50,11 +58,20 @@ describe('routeFromPermutation', () => {
 });
 
 describe('defaultCityProblem', () => {
-  it('returns 4 delivery points + depot', () => {
+  it('returns 6 delivery points + depot', () => {
     const problem = defaultCityProblem();
     expect(problem.depot).toBeDefined();
-    expect(problem.deliveries).toHaveLength(4);
+    expect(problem.deliveries).toHaveLength(6);
     const ids = problem.deliveries.map((d) => d.id);
-    expect(new Set(ids).size).toBe(4);
+    expect(new Set(ids).size).toBe(6);
+  });
+
+  it('binds each delivery to a graph node id', () => {
+    const problem = defaultCityProblem();
+    for (const d of problem.deliveries) {
+      const node = problem.layout.graph.nodes.find((n) => n.id === d.nodeId);
+      expect(node).toBeDefined();
+      expect(node?.kind).toBe('delivery');
+    }
   });
 });

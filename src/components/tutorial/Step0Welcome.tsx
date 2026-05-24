@@ -4,6 +4,7 @@ import { Panel } from '@/components/ui/Panel';
 import type { StepBaseProps } from './stepShared';
 
 export function Step0Welcome({ problem, CityScene }: StepBaseProps) {
+  const deliveryCount = problem.deliveries.length;
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
       <Panel style={{ padding: 0 }} className="overflow-hidden">
@@ -34,12 +35,12 @@ export function Step0Welcome({ problem, CityScene }: StepBaseProps) {
           <br />
           <strong>🏠 倉庫</strong> からトラックがスタートして、
           <br />
-          <strong>📦 4つの配送先</strong> を全部回って、
+          <strong>📦 {deliveryCount} つの配送先</strong> を全部回って、
           <br />
           倉庫に戻ってきます。
         </p>
         <p
-          className="text-sm rounded-lg p-3"
+          className="text-sm rounded-lg p-3 mb-3"
           style={{
             color: 'var(--color-ink)',
             background: 'oklch(96% 0.012 80)',
@@ -54,6 +55,20 @@ export function Step0Welcome({ problem, CityScene }: StepBaseProps) {
           </span>
           を見つけよう。
         </p>
+        <div
+          className="rounded-lg p-3 text-xs"
+          style={{
+            background: 'oklch(96% 0.018 200 / 0.4)',
+            border: '1px solid oklch(80% 0.04 200)',
+            color: 'var(--color-ink)',
+            lineHeight: 1.65,
+          }}
+        >
+          🗺️ 道路は <strong>明示的なエッジ</strong> で繋がっていて、
+          <span style={{ color: '#E69B4B' }}> 黄〜</span>
+          <span style={{ color: '#C8533C' }}>赤</span>{' '}
+          に染まっている道は<strong>渋滞中</strong>。トラックは道路を辿って走り、渋滞道はコストが大きくなります。
+        </div>
         <p
           className="mt-4 text-xs"
           style={{ color: 'var(--color-muted)', lineHeight: 1.7 }}

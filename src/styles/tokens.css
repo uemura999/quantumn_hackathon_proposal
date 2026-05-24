@@ -11,10 +11,10 @@
   --color-route: oklch(72% 0.16 60);
   --color-line: oklch(80% 0.01 260);
 
-  --font-sans: var(--font-noto-jp), system-ui, -apple-system, 'Hiragino Sans',
-    'Yu Gothic UI', sans-serif;
-  --font-display: var(--font-noto-jp), 'Hiragino Mincho ProN',
-    'Yu Mincho', serif;
+  --font-sans: system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic UI',
+    sans-serif;
+  --font-display: system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic UI',
+    sans-serif;
 
   --text-hud: clamp(0.95rem, 0.85rem + 0.4vw, 1.15rem);
   --text-score: clamp(1.6rem, 1rem + 1.6vw, 2.4rem);

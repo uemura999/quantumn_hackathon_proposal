@@ -28,13 +28,13 @@ export function MiniGuide({ running }: MiniGuideProps) {
 
   let message: string;
   if (running) {
-    message = '量子計算中… 重ね合わせが収束しています。';
+    message = '計算中です。候補の強さを出し直しています。';
   } else if (attempts === 0) {
-    message = 'γ・β・reps を動かして「量子で実行」を押してみよう。';
+    message = '短さの好み・混ぜる強さ・考え直す回数を動かして、実行してみよう。';
   } else if (!bestScore) {
     message = 'もう一度、パラメータを変えて実行してみよう。';
   } else {
-    message = `現在のベスト ${bestScore.distance.toFixed(2)}u。さらに縮められる？`;
+    message = `現在のベスト ${bestScore.distance.toFixed(2)} 距離pt。さらに縮められる？`;
   }
 
   return (

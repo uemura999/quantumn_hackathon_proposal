@@ -35,8 +35,8 @@ describe('scoreManualRoute', () => {
   });
 
   it('produces consistent best/worst distances regardless of input', () => {
-    const a = scoreManualRoute(problem, [0, 1, 2, 3]);
-    const b = scoreManualRoute(problem, [3, 2, 1, 0]);
+    const a = scoreManualRoute(problem, [0, 1, 2, 3, 4, 5]);
+    const b = scoreManualRoute(problem, [5, 4, 3, 2, 1, 0]);
     expect(a.bestDistance).toBeCloseTo(b.bestDistance);
     expect(a.worstDistance).toBeCloseTo(b.worstDistance);
   });
@@ -46,11 +46,11 @@ describe('scoreManualRoute', () => {
   });
 
   it('throws when order has duplicates', () => {
-    expect(() => scoreManualRoute(problem, [0, 1, 1, 2])).toThrow();
+    expect(() => scoreManualRoute(problem, [0, 1, 1, 2, 3, 4])).toThrow();
   });
 
   it('returns deltaFromBest equal to distance - bestDistance', () => {
-    const score = scoreManualRoute(problem, [0, 1, 2, 3]);
+    const score = scoreManualRoute(problem, [0, 1, 2, 3, 4, 5]);
     expect(score.deltaFromBest).toBeCloseTo(score.distance - score.bestDistance);
   });
 });

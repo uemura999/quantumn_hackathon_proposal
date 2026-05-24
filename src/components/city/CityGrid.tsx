@@ -2,33 +2,14 @@
 
 import { useMemo } from 'react';
 import { Color, MeshStandardMaterial } from 'three';
+import type { BuildingPlacement, CityBounds } from '@/engine/types';
 
 interface CityGridProps {
-  readonly extent?: number;
+  readonly buildings: ReadonlyArray<BuildingPlacement>;
+  readonly bounds: CityBounds;
 }
 
-const BUILDING_SEED: ReadonlyArray<{
-  x: number;
-  z: number;
-  h: number;
-}> = [
-  { x: -4.5, z: -4.5, h: 1.4 },
-  { x: -4.5, z: -2, h: 0.9 },
-  { x: -4.5, z: 1, h: 1.8 },
-  { x: -4.5, z: 4, h: 1.1 },
-  { x: -2, z: -4.5, h: 1.2 },
-  { x: -2, z: 4.5, h: 0.8 },
-  { x: 1.5, z: -4.5, h: 1.6 },
-  { x: 1.5, z: 4, h: 1.3 },
-  { x: 4.2, z: -4.5, h: 0.9 },
-  { x: 4.2, z: -2, h: 1.4 },
-  { x: 4.2, z: 1.5, h: 1.0 },
-  { x: 4.2, z: 4.2, h: 1.7 },
-  { x: 0, z: -2.5, h: 0.6 },
-  { x: 0, z: 2.5, h: 0.5 },
-];
-
-export function CityGrid({ extent = 6 }: CityGridProps) {
+export function CityGrid({ buildings, bounds }: CityGridProps) {
   const groundMaterial = useMemo(
     () =>
       new MeshStandardMaterial({
@@ -39,41 +20,47 @@ export function CityGrid({ extent = 6 }: CityGridProps) {
     [],
   );
 
-  const buildingMaterial = useMemo(
-    () =>
-      new MeshStandardMaterial({
-        color: new Color('#3A4564'),
-        roughness: 0.6,
-        metalness: 0.1,
-      }),
-    [],
-  );
+  const buildingMaterials = useMemo(() => {
+    return buildings.map(
+      (b) =>
+        new MeshStandardMaterial({
+          color: new Color().setHSL(
+            ((b.hue + 200) % 360) / 360,
+            0.18,
+            0.32 + (b.height / 4) * 0.12,
+          ),
+          roughness: 0.62,
+          metalness: 0.08,
+        }),
+    );
+  }, [buildings]);
+
+  const padding = 2.4;
+  const width = bounds.maxX - bounds.minX + padding * 2;
+  const depth = bounds.maxY - bounds.minY + padding * 2;
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerZ = (bounds.minY + bounds.maxY) / 2;
 
   return (
     <group>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.01, 0]}
+        position={[centerX, -0.02, centerZ]}
         receiveShadow
       >
-        <planeGeometry args={[extent * 2, extent * 2]} />
+        <planeGeometry args={[width, depth]} />
         <primitive object={groundMaterial} attach="material" />
       </mesh>
 
-      <gridHelper
-        args={[extent * 2, 12, '#A89F8D', '#C8C0B0']}
-        position={[0, 0, 0]}
-      />
-
-      {BUILDING_SEED.map((b, i) => (
+      {buildings.map((b, i) => (
         <mesh
-          key={i}
-          position={[b.x, b.h / 2, b.z]}
+          key={b.id}
+          position={[b.x, b.height / 2, b.y]}
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[1.0, b.h, 1.0]} />
-          <primitive object={buildingMaterial} attach="material" />
+          <boxGeometry args={[b.footprint * 2, b.height, b.footprint * 2]} />
+          <primitive object={buildingMaterials[i]} attach="material" />
         </mesh>
       ))}
     </group>

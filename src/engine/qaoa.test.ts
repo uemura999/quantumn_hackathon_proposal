@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runQaoa } from './qaoa';
+import { runQaoa, sampleRouteCandidate } from './qaoa';
 import {
   defaultCityProblem,
   indexToPermutation,
@@ -50,13 +50,10 @@ describe('runQaoa', () => {
     const validProbs = result.distribution
       .filter((c) => c.isValid)
       .map((c) => c.probability);
-    const mean =
-      validProbs.reduce((acc, p) => acc + p, 0) / validProbs.length;
-    const variance =
-      validProbs.reduce((acc, p) => acc + (p - mean) * (p - mean), 0) /
-      validProbs.length;
-    // Non-uniform: at least some spread in probability mass.
-    expect(variance).toBeGreaterThan(1e-6);
+    const uniform = 1 / validProbs.length;
+    const maxProb = Math.max(...validProbs);
+    // Non-uniform: the best-amplified route is at least 1.5x the uniform baseline.
+    expect(maxProb / uniform).toBeGreaterThan(1.5);
   });
 
   it('changes the distribution when gamma changes', () => {
@@ -91,12 +88,48 @@ describe('runQaoa', () => {
     expect(result.params).toEqual(params);
   });
 
+  it('reports uniform probability and top amplification', () => {
+    const result = runQaoa(problem, { gamma: 1.0, beta: 0.4, reps: 2 });
+    expect(result.uniformProbability).toBeCloseTo(1 / totalPerms);
+    expect(result.topAmplification).toBeCloseTo(
+      (result.bestValid?.probability ?? 0) / result.uniformProbability,
+    );
+    expect(result.topAmplification).toBeGreaterThan(1);
+  });
+
   it('produces routes whose distance matches scoring.routeDistance', () => {
     const result = runQaoa(problem, { gamma: 0.5, beta: 0.2, reps: 1 });
     for (const c of result.distribution.filter((x) => x.isValid)) {
       const expected = routeDistance(problem, c.order);
       expect(Math.abs(c.distance - expected)).toBeLessThan(1e-9);
     }
+  });
+
+  it('adds distance rank and delta from the shortest route', () => {
+    const result = runQaoa(problem, { gamma: 0.5, beta: 0.2, reps: 1 });
+    const shortest = result.distribution.reduce(
+      (min, c) => Math.min(min, c.distance),
+      Infinity,
+    );
+    const topByDistance = result.distribution
+      .slice()
+      .sort((a, b) => a.distance - b.distance)[0];
+
+    expect(topByDistance.distanceRank).toBe(1);
+    expect(topByDistance.deltaFromOptimal).toBeCloseTo(0);
+    for (const c of result.distribution) {
+      expect(c.distanceRank).toBeGreaterThanOrEqual(1);
+      expect(c.deltaFromOptimal).toBeCloseTo(c.distance - shortest);
+    }
+  });
+
+  it('samples a route from the probability distribution', () => {
+    const result = runQaoa(problem, { gamma: 1.0, beta: 0.4, reps: 2 });
+    const first = sampleRouteCandidate(result.distribution, () => 0);
+    const last = sampleRouteCandidate(result.distribution, () => 1);
+
+    expect(first).toEqual(result.distribution[0]);
+    expect(last).toEqual(result.distribution[result.distribution.length - 1]);
   });
 
   it('throws when reps is invalid', () => {

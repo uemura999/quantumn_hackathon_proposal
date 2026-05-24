@@ -43,7 +43,13 @@ export default function ResultPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>γ / β / reps</dt>
+                <dt className="text-xs uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>距離順位</dt>
+                <dd className="font-mono text-lg">
+                  {bestScore.distanceRank} 位
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-widest" style={{ color: 'var(--color-muted)' }}>好み / 混ぜる / 回数</dt>
                 <dd className="font-mono text-lg">
                   {bestScore.params.gamma.toFixed(2)} / {bestScore.params.beta.toFixed(2)} / {bestScore.params.reps}
                 </dd>

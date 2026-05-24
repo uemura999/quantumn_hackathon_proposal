@@ -13,7 +13,7 @@ const HINTS: ReadonlyArray<HintLine> = [
     level: 1,
     node: (
       <>
-        <GlossaryTooltip k="gamma" /> を増やすと「短いルートを選ぶ強さ」が上がります。
+        <GlossaryTooltip k="gamma" /> を少し増やすと、短い候補に印がつきます。
       </>
     ),
   },
@@ -21,8 +21,8 @@ const HINTS: ReadonlyArray<HintLine> = [
     level: 2,
     node: (
       <>
-        <GlossaryTooltip k="gamma" /> は <strong>0.8〜1.2</strong> くらいがよく効きます。
-        <GlossaryTooltip k="beta" /> は <strong>0.3〜0.5</strong>。
+        <GlossaryTooltip k="gamma" /> は <strong>0.8〜1.2</strong>、
+        <GlossaryTooltip k="beta" /> は <strong>0.3〜0.5</strong> あたりから試すと変化が見えやすいです。
       </>
     ),
   },
@@ -30,7 +30,7 @@ const HINTS: ReadonlyArray<HintLine> = [
     level: 3,
     node: (
       <>
-        <strong>reps=2</strong> ・ γ≈1.0 ・ β≈0.4 から始めて、少しずつ動かしてみよう。
+        <strong>考え直す回数=2</strong> ・ 短さの好み≈1.0 ・ 混ぜる強さ≈0.4 から少しずつ動かしてみよう。
       </>
     ),
   },
