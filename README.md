@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Opening Urban Challenges with Q
 
-## Getting Started
+> NTT 西日本 × 電通 — 量子技術で都市の配送ルートを最適化する、2 時間体験型ハッカソン
 
-First, run the development server:
+ブラウザ単独で動作する、QAOA (Quantum Approximate Optimization Algorithm) による配送ルート最適化シミュレータ + 高校生向け教育コンテンツ。
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Node 20+ 推奨 (vitest 4 の rolldown が要件)
+nvm use 22.22.1   # or any Node 20+
+
+# install
+pnpm install     # or npm install
+
+# dev server
+pnpm dev         # http://localhost:3000
+
+# tests (50 ユニット/統合テスト)
+pnpm test
+
+# production build
+pnpm build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 構成
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/` (Intro) — 都市の立ち上げ演出
+- `/tutorial` — 7 ステップのルート最適化チュートリアル
+- `/challenge` — メイン体験ループ (3D シーン + 候補バー + 3つのつまみ)
+- `/result` — プレゼン用結果画面
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 設計ドキュメント
 
-## Learn More
+- [`docs/architecture.md`](docs/architecture.md) — 実装の単一の真実 (SSOT)
+- [`docs/educational-design.md`](docs/educational-design.md) — 高校生向け教育設計
 
-To learn more about Next.js, take a look at the following resources:
+## 手動スモークテスト
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+E2E 自動化は未導入。リリース前に以下を目視確認してください。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. `pnpm dev` で起動
+2. `/` を開いてタイトル + 都市シーン表示を確認
+3. `/tutorial` Step 0 〜 6 を順に踏破
+   - Step 2: 候補バーの全バーが ≈ 0.14% (1/720) で均等
+   - Step 3: 「短さの好み」スライダー操作で短ルートの緑バーが伸び縮みする
+   - Step 3: 強すぎプリセットで InterferenceDemo の打ち消し率が大きく変動
+   - Step 5: LayerReplay で「最初 → 印をつける → 混ぜる」の確率推移が再生できる
+4. `/challenge` で:
+   - 3D シーンに建物・道路・渋滞色・配送ピン・倉庫が**重ならず**配置されている
+   - 右側の候補バーがスライダーに即座に追従する
+   - 「この設定で実行」でトラックが**道路に沿って**走る (建物を貫通しない)
+   - 上部の「今回の成果」に距離・配送時間・確信度・前回との差が出る
+   - 交通状況 (昼/朝ラッシュ/夕方ラッシュ) を変えると渋滞色と候補バーが更新される
+5. `prefers-reduced-motion: reduce` を有効にしてアニメ短縮を確認
 
-## Deploy on Vercel
+## アーキテクチャ概要
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **エンジン** (`src/engine/`): 純粋 TypeScript、React/DOM 依存なし、Float64Array で量子状態を表現
+- **道路グラフ** (`src/engine/city-layout.ts`): 5×5 = 25 ノード、40 エッジ、6 配送先、渋滞 4 段階
+- **R3F シーン** (`src/components/city/`): CityGrid + RoadNetwork + DeliveryPins + Truck + ProbabilityFog
+- **候補バー** (`src/components/wave/`): WavePanel (常時表示) + InterferenceDemo (Step3 専用) + LayerReplay (Step5 専用)
+- **状態管理**: Zustand 4 ストア (params / session / hint / tutorial)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ライセンス
+
+非公開ハッカソン教材。社内/教育用途のみ。
+
+# quantumn_hackathon_proposal
