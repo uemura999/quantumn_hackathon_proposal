@@ -12,17 +12,35 @@ interface TruckProps {
   readonly problem: CityProblem;
   readonly route: RouteCandidate | null;
   readonly running: boolean;
+  readonly onProgress?: (progress: TruckJourneyProgress) => void;
   readonly onComplete?: () => void;
+}
+
+export interface TruckJourneyProgress {
+  readonly fraction: number;
+  readonly completedDeliveries: number;
+}
+
+interface TruckJourney {
+  readonly curve: CatmullRomCurve3;
+  readonly deliveryArrivalFractions: ReadonlyArray<number>;
 }
 
 const SPEED_UNITS_PER_SECOND = 4.5;
 
-export function Truck({ problem, route, running, onComplete }: TruckProps) {
+export function Truck({
+  problem,
+  route,
+  running,
+  onProgress,
+  onComplete,
+}: TruckProps) {
   const groupRef = useRef<Group>(null);
   const progressRef = useRef(0);
   const completedRef = useRef(false);
+  const reportedProgressRef = useRef('');
 
-  const curve = useMemo(() => {
+  const journey = useMemo<TruckJourney | null>(() => {
     if (!route) return null;
     const deliveryNodeById = new Map(
       problem.deliveries.map((d) => [d.id, d.nodeId]),
@@ -44,42 +62,83 @@ export function Truck({ problem, route, running, onComplete }: TruckProps) {
     const positions = polyline.points.map(
       (p) => new Vector3(p.x, 0.28, p.y),
     );
-    return new CatmullRomCurve3(positions, false, 'catmullrom', 0.18);
+    const curve = new CatmullRomCurve3(positions, false, 'catmullrom', 0.18);
+    const arcLengths = curve.getLengths(Math.max(400, positions.length * 32));
+    let arrivalPointIndex = 0;
+    const deliveryArrivalFractions: number[] = [];
+    for (let i = 1; i < nodeSeq.length; i++) {
+      const leg = polylineForRoute(
+        problem.layout,
+        problem.shortestPaths,
+        [nodeSeq[i - 1], nodeSeq[i]],
+      );
+      arrivalPointIndex += Math.max(0, leg.points.length - 1);
+      if (route.order[i] !== DEPOT_INDEX) {
+        deliveryArrivalFractions.push(
+          arcFractionAtControlPoint(
+            arrivalPointIndex,
+            positions.length,
+            arcLengths,
+          ),
+        );
+      }
+    }
+
+    return { curve, deliveryArrivalFractions };
   }, [problem, route]);
 
   const totalLength = useMemo(() => {
-    if (!curve) return 0;
-    return curve.getLength();
-  }, [curve]);
+    if (!journey) return 0;
+    return journey.curve.getLength();
+  }, [journey]);
 
   useFrame((_, delta) => {
     const group = groupRef.current;
-    if (!group || !curve || totalLength === 0) return;
+    if (!group || !journey || totalLength === 0) return;
 
     if (running) {
-      completedRef.current = false;
       progressRef.current += (delta * SPEED_UNITS_PER_SECOND) / totalLength;
     } else {
       progressRef.current = 0;
+      completedRef.current = false;
+      reportedProgressRef.current = '';
     }
 
     if (progressRef.current >= 1) {
       progressRef.current = 1;
+    }
+
+    const t = progressRef.current;
+    if (running) {
+      const completedDeliveries = journey.deliveryArrivalFractions.filter(
+        (arrival) => arrival <= t,
+      ).length;
+      const visiblePercentage = Math.floor(t * 100);
+      const reportKey = `${visiblePercentage}:${completedDeliveries}`;
+      if (reportedProgressRef.current !== reportKey) {
+        reportedProgressRef.current = reportKey;
+        onProgress?.({
+          fraction: visiblePercentage / 100,
+          completedDeliveries,
+        });
+      }
+    }
+
+    if (progressRef.current >= 1) {
       if (!completedRef.current) {
         completedRef.current = true;
         onComplete?.();
       }
     }
 
-    const t = progressRef.current;
-    const pos = curve.getPointAt(t);
-    const tangent = curve.getTangentAt(t);
+    const pos = journey.curve.getPointAt(t);
+    const tangent = journey.curve.getTangentAt(t);
     group.position.copy(pos);
     const targetAngle = Math.atan2(tangent.x, tangent.z);
     group.rotation.y = targetAngle;
   });
 
-  if (!curve) return null;
+  if (!journey) return null;
 
   return (
     <group ref={groupRef}>
@@ -101,4 +160,21 @@ export function Truck({ problem, route, running, onComplete }: TruckProps) {
       </mesh>
     </group>
   );
+}
+
+function arcFractionAtControlPoint(
+  pointIndex: number,
+  pointCount: number,
+  arcLengths: ReadonlyArray<number>,
+): number {
+  const targetT = pointIndex / (pointCount - 1);
+  const divisions = arcLengths.length - 1;
+  const scaledIndex = targetT * divisions;
+  const beforeIndex = Math.floor(scaledIndex);
+  const afterIndex = Math.min(divisions, Math.ceil(scaledIndex));
+  const interpolation = scaledIndex - beforeIndex;
+  const distance =
+    arcLengths[beforeIndex] +
+    (arcLengths[afterIndex] - arcLengths[beforeIndex]) * interpolation;
+  return distance / arcLengths[divisions];
 }

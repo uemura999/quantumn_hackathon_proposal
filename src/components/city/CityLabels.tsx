@@ -8,6 +8,7 @@ interface CityLabelsProps {
   readonly problem: CityProblem;
   readonly highlightedIds?: ReadonlySet<number>;
   readonly nextPickId?: number | null;
+  readonly nextLabelSuffix?: string;
 }
 
 const DEPOT_ID = -1;
@@ -50,6 +51,7 @@ export function CityLabels({
   problem,
   highlightedIds,
   nextPickId,
+  nextLabelSuffix = ' (次にクリック)',
 }: CityLabelsProps) {
   const labelOverrides = useLabelStore((s) => s.labels);
   return (
@@ -72,7 +74,7 @@ export function CityLabels({
             ? 'depot'
             : 'delivery';
         const icon = isHighlighted ? '✓' : isNext ? '👉' : '📦';
-        const suffix = isHighlighted ? ' (済)' : isNext ? ' (次にクリック)' : '';
+        const suffix = isHighlighted ? ' (済)' : isNext ? nextLabelSuffix : '';
         const customLabel = labelOverrides[d.id];
         const effectiveLabel =
           customLabel && customLabel.trim().length > 0

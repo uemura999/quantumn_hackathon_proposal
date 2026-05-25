@@ -22,7 +22,7 @@ interface ColabUrlConfig {
 }
 
 const DEFAULT_CONFIG = {
-  githubOwner: 'NTT-WEST-DENTSU',
+  githubOwner: 'NTT-WEST-DENSO',
   githubRepo: 'quantum-hackathon',
   githubBranch: 'main',
 } as const;

@@ -3,10 +3,8 @@
 import Link from 'next/link';
 import { Panel } from '@/components/ui/Panel';
 import { Button } from '@/components/ui/Button';
-import { ColabButton } from '@/components/handoff/ColabButton';
 import { metaphors } from '@/lib/metaphors';
 import { glossary } from '@/lib/glossary';
-import { useParamsStore } from '@/store/paramsStore';
 
 interface RecapCard {
   readonly num: string;
@@ -37,9 +35,6 @@ const CARDS: ReadonlyArray<RecapCard> = [
 ];
 
 export function Step6Recap() {
-  const gamma = useParamsStore((s) => s.gamma);
-  const beta = useParamsStore((s) => s.beta);
-  const reps = useParamsStore((s) => s.reps);
   return (
     <div className="space-y-6">
       <Panel>
@@ -120,72 +115,6 @@ export function Step6Recap() {
           style={{ color: 'var(--color-muted)', lineHeight: 1.7 }}
         >
           チャレンジ画面では渋滞のある道(<span style={{ color: '#E69B4B' }}>黄</span>/<span style={{ color: '#C8533C' }}>赤</span>) を避ける形でルートが選ばれるはずです。同じつまみでも、道の混み方が変わると答えが変わります。
-        </p>
-      </Panel>
-
-      <Panel>
-        <h3
-          className="font-semibold mb-2"
-          style={{ fontSize: '1.05rem' }}
-        >
-          🐍 次のステップ — 本物の Qiskit で動かす
-        </h3>
-        <p
-          className="text-sm mb-3"
-          style={{ color: 'var(--color-ink-soft)', lineHeight: 1.7 }}
-        >
-          Tutorial で触ったつまみと**同じ計算**を、本物の量子フレームワーク Qiskit (Google Colab) で動かせます。2 つの Notebook から選べます。
-        </p>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div
-            className="rounded-xl border p-3"
-            style={{
-              background: 'oklch(98% 0.005 80)',
-              borderColor: 'oklch(85% 0.012 80)',
-            }}
-          >
-            <h4 className="font-semibold text-sm mb-1">📊 比較版 (5×5 グリッド)</h4>
-            <p className="text-[11px] mb-2" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
-              Tutorial と同じ抽象都市の問題を Qiskit で解き、JS の結果と比較表で並べる。すぐ走る。
-            </p>
-            <ColabButton
-              payload={{
-                params: { gamma, beta, reps },
-                profile: 'midday',
-                notebook: 'handoff',
-              }}
-              label="比較版を開く"
-              variant="ghost"
-            />
-          </div>
-          <div
-            className="rounded-xl border p-3"
-            style={{
-              background:
-                'linear-gradient(180deg, oklch(96% 0.018 200 / 0.5) 0%, oklch(94% 0.025 260 / 0.4) 100%)',
-              borderColor: 'oklch(80% 0.04 240)',
-            }}
-          >
-            <h4 className="font-semibold text-sm mb-1">🗺 実地図版 (自分の街)</h4>
-            <p className="text-[11px] mb-2" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
-              6 つの実在の場所 (例: 京都 6 選) を入れて、本物の地図に Qiskit の最適ルートを描画。ストーリー重視。
-            </p>
-            <ColabButton
-              payload={{
-                params: { gamma, beta, reps },
-                profile: 'midday',
-                notebook: 'real_city',
-              }}
-              label="実地図版を開く"
-              variant="primary"
-            />
-          </div>
-        </div>
-        <p
-          className="mt-3 text-[11px]"
-          style={{ color: 'var(--color-muted)', lineHeight: 1.6 }}
-        >
-          所要時間 各 5 分。Notebook の指示通りペースト → メニュー「ランタイム → すべて実行」。
         </p>
       </Panel>
 

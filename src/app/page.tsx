@@ -25,7 +25,7 @@ export default function IntroPage() {
             className="mb-4 text-sm font-medium uppercase tracking-[0.3em]"
             style={{ color: 'var(--color-accent-strong)' }}
           >
-            NTT West × Dentsu — Quantum Workshop
+            NTT West × Denso — Quantum Workshop
           </p>
           <h1
             id="intro-title"

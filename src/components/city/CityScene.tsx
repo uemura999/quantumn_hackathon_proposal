@@ -11,6 +11,7 @@ import { ProbabilityFog } from './ProbabilityFog';
 import type { CandidateVisibility } from './ProbabilityFog';
 import { RoadNetwork } from './RoadNetwork';
 import { Truck } from './Truck';
+import type { TruckJourneyProgress } from './Truck';
 import type { CityProblem, RouteCandidate } from '@/engine/types';
 
 interface CitySceneProps {
@@ -20,11 +21,13 @@ interface CitySceneProps {
   readonly selectedRoute?: RouteCandidate | null;
   readonly truckRunning: boolean;
   readonly pulsing: boolean;
+  readonly onTruckProgress?: (progress: TruckJourneyProgress) => void;
   readonly onTruckComplete?: () => void;
   readonly showLabels?: boolean;
   readonly showTraffic?: boolean;
   readonly visitedIds?: ReadonlySet<number>;
   readonly nextPickId?: number | null;
+  readonly nextLabelSuffix?: string;
   readonly onPinClick?: (deliveryId: number) => void;
   readonly manualRouteOrder?: ReadonlyArray<number>;
   readonly candidateVisibility?: CandidateVisibility;
@@ -37,11 +40,13 @@ export function CityScene({
   selectedRoute,
   truckRunning,
   pulsing,
+  onTruckProgress,
   onTruckComplete,
   showLabels = false,
   showTraffic = true,
   visitedIds,
   nextPickId,
+  nextLabelSuffix,
   onPinClick,
   manualRouteOrder,
   candidateVisibility = 'show',
@@ -50,7 +55,7 @@ export function CityScene({
     <Canvas
       camera={{ position: [0, 20, 22], fov: 38 }}
       dpr={[1, 2]}
-      shadows
+      shadows="percentage"
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       style={{ background: 'transparent', borderRadius: '0.75rem' }}
     >
@@ -84,6 +89,7 @@ export function CityScene({
             problem={problem}
             highlightedIds={visitedIds}
             nextPickId={nextPickId ?? null}
+            nextLabelSuffix={nextLabelSuffix}
           />
         )}
         <ProbabilityFog
@@ -100,6 +106,7 @@ export function CityScene({
           problem={problem}
           route={truckRoute}
           running={truckRunning}
+          onProgress={onTruckProgress}
           onComplete={onTruckComplete}
         />
 

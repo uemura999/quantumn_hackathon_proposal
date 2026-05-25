@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { ParameterSliders } from '@/components/controls/ParameterSliders';
@@ -13,8 +13,9 @@ import { GlossaryTooltip } from '@/components/hints/GlossaryTooltip';
 import { Confetti } from '@/components/ui/Confetti';
 import { MiniLegend } from '@/components/ui/MiniLegend';
 import { ExecutionNarration } from '@/components/challenge/ExecutionNarration';
+import { RouteJourneyStatus } from '@/components/challenge/RouteJourneyStatus';
 import { WavePanel } from '@/components/wave/WavePanel';
-import { ColabButton } from '@/components/handoff/ColabButton';
+import type { TruckJourneyProgress } from '@/components/city/Truck';
 import { runQaoa, sampleRouteCandidate } from '@/engine/qaoa';
 import { buildCityProblem, numPermutations } from '@/engine/tsp';
 import type { TrafficProfileName } from '@/engine/city-layout';
@@ -44,6 +45,11 @@ const TRAFFIC_PROFILES: ReadonlyArray<{
   { value: 'morning_rush', label: '朝ラッシュ' },
   { value: 'evening_rush', label: '夕方ラッシュ' },
 ];
+
+const INITIAL_TRUCK_PROGRESS: TruckJourneyProgress = {
+  fraction: 0,
+  completedDeliveries: 0,
+};
 
 export default function ChallengePage() {
   const [trafficProfile, setTrafficProfile] =
@@ -82,6 +88,9 @@ export default function ChallengePage() {
   const [pulsing, setPulsing] = useState(false);
   const [truckRoute, setTruckRoute] = useState<RouteCandidate | null>(null);
   const [truckRunning, setTruckRunning] = useState(false);
+  const [truckProgress, setTruckProgress] = useState<TruckJourneyProgress>(
+    INITIAL_TRUCK_PROGRESS,
+  );
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [narrationTrigger, setNarrationTrigger] = useState(0);
 
@@ -94,6 +103,7 @@ export default function ChallengePage() {
       previousAttempt?.trafficProfile === problem.layout.trafficProfile;
     setPulsing(true);
     setTruckRunning(false);
+    setTruckProgress(INITIAL_TRUCK_PROGRESS);
     setNarrationTrigger((t) => t + 1);
     // Defer to next tick to let the pulse render before the synchronous QAOA.
     window.setTimeout(() => {
@@ -121,9 +131,13 @@ export default function ChallengePage() {
     }, 350);
   };
 
-  const onTruckComplete = (): void => {
+  const onTruckProgress = useCallback((progress: TruckJourneyProgress): void => {
+    setTruckProgress(progress);
+  }, []);
+
+  const onTruckComplete = useCallback((): void => {
     setTruckRunning(false);
-  };
+  }, []);
 
   const totalRoutes = numPermutations(problem.deliveries.length);
   const paramsChanged =
@@ -137,6 +151,18 @@ export default function ChallengePage() {
   const displayResult = resultStale || result === null ? previewResult : result;
   const displayTruckRoute = resultStale ? null : truckRoute;
   const displayedSampledRoute = resultStale ? null : sampledRoute;
+  const deliveryOrder = useMemo(
+    () => displayTruckRoute?.order.filter((id) => id >= 0) ?? [],
+    [displayTruckRoute],
+  );
+  const visitedDeliveryIds = useMemo(
+    () => new Set(deliveryOrder.slice(0, truckProgress.completedDeliveries)),
+    [deliveryOrder, truckProgress.completedDeliveries],
+  );
+  const nextDeliveryId =
+    truckProgress.fraction < 1
+      ? deliveryOrder[truckProgress.completedDeliveries] ?? null
+      : null;
   const hasDisplayedRoute =
     displayTruckRoute !== null || displayedSampledRoute !== null;
   const routeDisplayMode = hasDisplayedRoute
@@ -202,7 +228,7 @@ export default function ChallengePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px_320px]">
         <Panel className="overflow-hidden" style={{ padding: 0 }}>
-          <div className="h-[60vh] min-h-[420px] w-full">
+          <div className="relative h-[60vh] min-h-[420px] w-full">
             <CityScene
               problem={problem}
               distribution={displayResult.distribution}
@@ -210,9 +236,23 @@ export default function ChallengePage() {
               selectedRoute={displayedSampledRoute}
               truckRunning={truckRunning}
               pulsing={pulsing}
+              onTruckProgress={onTruckProgress}
               onTruckComplete={onTruckComplete}
               showLabels
+              visitedIds={
+                !pulsing && displayTruckRoute ? visitedDeliveryIds : undefined
+              }
+              nextPickId={
+                !pulsing && displayTruckRoute ? nextDeliveryId : null
+              }
+              nextLabelSuffix=" (次の配送先)"
               candidateVisibility="hideWhenSelected"
+            />
+            <RouteJourneyStatus
+              problem={problem}
+              route={pulsing ? null : displayTruckRoute}
+              progress={truckProgress}
+              running={truckRunning}
             />
           </div>
         </Panel>
@@ -321,65 +361,6 @@ export default function ChallengePage() {
           <MechanismPanel />
           <HintPanel />
 
-          <Panel>
-            <h3
-              className="font-semibold mb-2"
-              style={{ fontSize: '1rem' }}
-            >
-              🐍 本物の Qiskit で確かめる
-            </h3>
-            <p
-              className="text-xs mb-3"
-              style={{ color: 'var(--color-ink-soft)', lineHeight: 1.7 }}
-            >
-              いまのパラメータを Colab に持っていって、本物の量子フレームワーク (Qiskit + AerSimulator) でもう一度解きます。
-            </p>
-            <div className="space-y-2">
-              <div>
-                <p
-                  className="text-[11px] mb-1 font-semibold"
-                  style={{ color: 'var(--color-ink)' }}
-                >
-                  📊 比較版 — JS の結果と並べる
-                </p>
-                <ColabButton
-                  payload={{
-                    params: currentParams,
-                    profile: trafficProfile,
-                    topRoutes: result?.distribution?.slice(0, 3) ?? [],
-                    notebook: 'handoff',
-                  }}
-                  label="比較版を開く"
-                  variant="ghost"
-                />
-              </div>
-              <div>
-                <p
-                  className="text-[11px] mb-1 font-semibold"
-                  style={{ color: 'var(--color-ink)' }}
-                >
-                  🗺 実地図版 — 自分の街でやる
-                </p>
-                <ColabButton
-                  payload={{
-                    params: currentParams,
-                    profile: trafficProfile,
-                    notebook: 'real_city',
-                  }}
-                  label="実地図版を開く"
-                  variant="primary"
-                />
-              </div>
-            </div>
-            {!result && (
-              <p
-                className="mt-2 text-[11px]"
-                style={{ color: 'var(--color-muted)' }}
-              >
-                💡 先に「この設定で実行」を 1 回押すと、JS の結果が比較版 Notebook の比較表に乗ります。
-              </p>
-            )}
-          </Panel>
         </div>
       </div>
     </section>
