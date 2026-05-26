@@ -97,6 +97,27 @@ describe('runQaoa', () => {
     expect(result.topAmplification).toBeGreaterThan(1);
   });
 
+  it('reports expected distance as the probability-weighted route distance', () => {
+    const result = runQaoa(problem, { gamma: 1.0, beta: 0.4, reps: 2 });
+    const weightedMean = result.distribution.reduce(
+      (sum, candidate) => sum + candidate.distance * candidate.probability,
+      0,
+    );
+
+    expect(result.expectedDistance).toBeCloseTo(weightedMean);
+  });
+
+  it('can improve expected distance by tuning QAOA parameters', () => {
+    const uniform = runQaoa(problem, { gamma: 0, beta: 0, reps: 1 });
+    const tuned = runQaoa(problem, {
+      gamma: Math.PI,
+      beta: Math.PI / 2,
+      reps: 3,
+    });
+
+    expect(tuned.expectedDistance).toBeLessThan(uniform.expectedDistance);
+  });
+
   it('produces routes whose distance matches scoring.routeDistance', () => {
     const result = runQaoa(problem, { gamma: 0.5, beta: 0.2, reps: 1 });
     for (const c of result.distribution.filter((x) => x.isValid)) {

@@ -23,6 +23,8 @@ export function StoryCardPdfPreview() {
   const reps = useParamsStore((s) => s.reps);
 
   const lastAttempt = history[history.length - 1] ?? null;
+  const displayedParams = bestScore?.params ?? { gamma, beta, reps };
+  const recordedSample = bestScore?.sampledRoute ?? lastAttempt?.sampledRoute ?? null;
   const trafficLabel = bestScore
     ? TRAFFIC_LABEL[bestScore.trafficProfile] ?? bestScore.trafficProfile
     : lastAttempt
@@ -154,36 +156,38 @@ export function StoryCardPdfPreview() {
           </h2>
           <div className="grid grid-cols-2 gap-3" style={{ fontSize: '10pt' }}>
             <dl className="space-y-1">
-              <FlexRow term="短さの好み (γ)" value={gamma.toFixed(2)} />
-              <FlexRow term="混ぜる強さ (β)" value={beta.toFixed(2)} />
-              <FlexRow term="考え直す回数" value={`${reps} 回`} />
+              <FlexRow term="短さの好み (γ)" value={displayedParams.gamma.toFixed(2)} />
+              <FlexRow term="混ぜる強さ (β)" value={displayedParams.beta.toFixed(2)} />
+              <FlexRow term="考え直す回数" value={`${displayedParams.reps} 回`} />
               <FlexRow term="交通状況" value={trafficLabel} />
             </dl>
             <dl className="space-y-1">
               <FlexRow
-                term="ベスト距離"
+                term="ベスト期待距離"
                 value={
                   bestScore
-                    ? formatDistance(bestScore.distance)
-                    : lastAttempt?.bestValid
-                      ? formatDistance(lastAttempt.bestValid.distance)
+                    ? formatDistance(bestScore.expectedDistance)
+                    : lastAttempt
+                      ? formatDistance(lastAttempt.expectedDistance)
                       : '— u'
                 }
                 strong
               />
               <FlexRow
-                term="1 位順位 (距離)"
+                term="同実行の走行距離"
                 value={
-                  bestScore
-                    ? `${bestScore.distanceRank} 位 / 720`
+                  recordedSample
+                    ? formatDistance(recordedSample.distance)
                     : '—'
                 }
               />
               <FlexRow
-                term="1 位の確信度"
+                term="最有力候補の確信度 (参考)"
                 value={
-                  lastAttempt?.bestValid
-                    ? `${(lastAttempt.bestValid.probability * 100).toFixed(1)}%`
+                  bestScore
+                    ? `${bestScore.topAmplification.toFixed(1)} 倍`
+                    : lastAttempt
+                      ? `${lastAttempt.topAmplification.toFixed(1)} 倍`
                     : '—'
                 }
               />

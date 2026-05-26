@@ -55,10 +55,15 @@ export function runQaoa(
     validCount,
     n,
   );
+  const expectedDistance = distribution.reduce(
+    (sum, candidate) => sum + candidate.distance * candidate.probability,
+    0,
+  );
 
   return {
     distribution,
     bestValid,
+    expectedDistance,
     elapsedMs: performance.now() - startedAt,
     params,
     trafficProfile: problem.layout.trafficProfile,

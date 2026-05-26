@@ -34,7 +34,7 @@ export function MiniGuide({ running }: MiniGuideProps) {
   } else if (!bestScore) {
     message = 'もう一度、パラメータを変えて実行してみよう。';
   } else {
-    message = `現在のベスト ${bestScore.distance.toFixed(2)} 距離pt。さらに縮められる？`;
+    message = `現在のベスト期待距離 ${bestScore.expectedDistance.toFixed(2)} 距離pt。さらに縮められる？`;
   }
 
   return (

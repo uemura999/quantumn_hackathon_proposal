@@ -86,6 +86,7 @@ export interface RouteCandidate {
 export interface QaoaResult {
   readonly distribution: ReadonlyArray<RouteCandidate>;
   readonly bestValid: RouteCandidate | null;
+  readonly expectedDistance: number;
   readonly elapsedMs: number;
   readonly params: QaoaParams;
   readonly trafficProfile: string;

@@ -24,11 +24,8 @@ import { useParamsStore } from '@/store/paramsStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { formatDistance } from '@/lib/animation';
 import {
-  compareRouteOutcome,
-  describeRouteOrder,
   estimateDeliveryMinutes,
   formatDeliveryMinutes,
-  type RouteOutcomeDelta,
 } from '@/lib/routeMetrics';
 import { isFlatDistribution } from '@/lib/distributionShape';
 
@@ -81,8 +78,7 @@ export default function ChallengePage() {
   const [lastOutcome, setLastOutcome] = useState<{
     readonly isNewBest: boolean;
     readonly deltaFromBest: number | null;
-    readonly previousBestValid: RouteCandidate | null;
-    readonly previousAmplification: number;
+    readonly previousExpectedDistance: number | null;
     readonly sameTrafficProfile: boolean;
   } | null>(null);
   const [pulsing, setPulsing] = useState(false);
@@ -97,10 +93,13 @@ export default function ChallengePage() {
   const onExecute = (): void => {
     const paramsForRun = currentParams;
     const previousAttempt = history[history.length - 1] ?? null;
-    const previousBestValid = previousAttempt?.bestValid ?? null;
-    const previousAmplification = previousAttempt?.topAmplification ?? 0;
     const sameTrafficProfile =
-      previousAttempt?.trafficProfile === problem.layout.trafficProfile;
+      previousAttempt === null ||
+      previousAttempt.trafficProfile === problem.layout.trafficProfile;
+    const previousExpectedDistance =
+      previousAttempt !== null && sameTrafficProfile
+        ? previousAttempt.expectedDistance
+        : null;
     setPulsing(true);
     setTruckRunning(false);
     setTruckProgress(INITIAL_TRUCK_PROGRESS);
@@ -119,8 +118,7 @@ export default function ChallengePage() {
       const outcome = recordAttempt(next, measured);
       setLastOutcome({
         ...outcome,
-        previousBestValid,
-        previousAmplification,
+        previousExpectedDistance,
         sameTrafficProfile,
       });
       if (outcome.isNewBest) {
@@ -170,16 +168,11 @@ export default function ChallengePage() {
     : isFlatDistribution(displayResult.distribution)
       ? 'flat'
       : 'ranked';
-  const previousForDelta =
-    lastOutcome?.sameTrafficProfile === true
-      ? lastOutcome.previousBestValid
+  const expectedDistanceDelta =
+    result !== null && lastOutcome?.previousExpectedDistance !== null &&
+    lastOutcome?.previousExpectedDistance !== undefined
+      ? result.expectedDistance - lastOutcome.previousExpectedDistance
       : null;
-  const outcomeDelta = compareRouteOutcome(
-    result?.bestValid ?? null,
-    previousForDelta,
-    result?.topAmplification ?? 0,
-    lastOutcome?.previousAmplification ?? 0,
-  );
 
   return (
     <section className="mx-auto max-w-screen-2xl px-6 py-8">
@@ -221,8 +214,8 @@ export default function ChallengePage() {
         resultStale={resultStale}
         staleReason={staleReason}
         totalRoutes={totalRoutes}
-        outcomeDelta={outcomeDelta}
-        previousRoute={previousForDelta}
+        isNewBest={lastOutcome?.isNewBest ?? false}
+        expectedDistanceDelta={expectedDistanceDelta}
         previousWasComparable={lastOutcome?.sameTrafficProfile ?? true}
       />
 
@@ -263,7 +256,7 @@ export default function ChallengePage() {
             mode="frozen"
             frozenDistribution={displayResult.distribution}
             params={displayResult.params}
-            title={resultStale ? '調整中の候補' : result ? '実行結果の候補' : '調整中の候補'}
+            title={resultStale ? '調整中の候補' : result ? '実行結果の候補 (参考)' : '調整中の候補'}
           />
           <MiniLegend routeMode={routeDisplayMode} />
         </div>
@@ -298,18 +291,39 @@ export default function ChallengePage() {
                     {staleReason}です。左のマップと候補バーはプレビュー、下の結果は最後に実行した記録です。
                   </p>
                 )}
-                <RouteResultBlock
-                  title="波が推している1位候補"
-                  route={result.bestValid}
-                  totalRoutes={totalRoutes}
-                />
+                <section
+                  className="rounded-lg p-3"
+                  style={{
+                    background: 'oklch(94% 0.025 80)',
+                    border: '1px solid oklch(82% 0.04 80)',
+                  }}
+                >
+                  <p className="text-xs font-semibold" style={{ color: 'var(--color-muted)' }}>
+                    今回の期待距離スコア
+                  </p>
+                  <p
+                    className="mt-1 font-mono text-xl"
+                    style={{ color: 'var(--color-accent-strong)' }}
+                  >
+                    {formatDistance(result.expectedDistance)}
+                  </p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--color-ink-soft)' }}>
+                    全候補の距離を選ばれやすさで平均。小さいほど良いスコアです。
+                  </p>
+                </section>
                 {sampledRoute && (
                   <RouteResultBlock
-                    title="今回取り出したルート"
+                    title="今回 van が走ったルート (観測)"
                     route={sampledRoute}
                     totalRoutes={totalRoutes}
                   />
                 )}
+                <RouteResultBlock
+                  title="波の最有力候補 (参考・スコア対象外)"
+                  route={result.bestValid}
+                  totalRoutes={totalRoutes}
+                  supplemental
+                />
                 <dl className="space-y-2">
                   <div className="flex justify-between">
                     <dt style={{ color: 'var(--color-muted)' }}>
@@ -320,7 +334,7 @@ export default function ChallengePage() {
                   {lastOutcome && (
                     <div className="flex justify-between">
                       <dt style={{ color: 'var(--color-muted)' }}>
-                        ベスト更新
+                        期待距離ベスト更新
                       </dt>
                       <dd
                         className="font-mono"
@@ -341,18 +355,18 @@ export default function ChallengePage() {
                   {bestScore && (
                     <div className="flex justify-between pt-2 border-t border-[oklch(85%_0.01_80)]">
                       <dt style={{ color: 'var(--color-accent-strong)' }}>
-                        セッションベスト
+                        セッションベスト期待距離
                       </dt>
                       <dd className="font-mono" style={{ color: 'var(--color-accent-strong)' }}>
-                        {formatDistance(bestScore.distance)}
+                        {formatDistance(bestScore.expectedDistance)}
                       </dd>
                     </div>
                   )}
                 </dl>
               </div>
             ) : (
-              <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
-                左のマップと候補バーは、いまのスライダーでのプレビューです。実行すると今回のルートが取り出されます。
+          <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
+                左のマップと候補バーは、いまのスライダーでのプレビューです。実行すると期待距離スコアと、van が走る観測ルートが記録されます。
               </p>
             )}
           </Panel>
@@ -371,19 +385,24 @@ interface RouteResultBlockProps {
   readonly title: string;
   readonly route: RouteCandidate;
   readonly totalRoutes: number;
+  readonly supplemental?: boolean;
 }
 
 function RouteResultBlock({
   title,
   route,
   totalRoutes,
+  supplemental = false,
 }: RouteResultBlockProps) {
   return (
     <section
       className="rounded-lg p-3"
       style={{
-        background: 'oklch(98% 0.005 80)',
-        border: '1px solid oklch(85% 0.012 80)',
+        background: supplemental ? 'oklch(98% 0.003 80)' : 'oklch(98% 0.005 80)',
+        border: supplemental
+          ? '1px dashed oklch(86% 0.01 80)'
+          : '1px solid oklch(85% 0.012 80)',
+        opacity: supplemental ? 0.88 : 1,
       }}
     >
       <h3 className="mb-2 text-xs font-semibold" style={{ color: 'var(--color-muted)' }}>
@@ -409,7 +428,7 @@ function RouteResultBlock({
           <dd className="font-mono">{formatSignedDistance(route.deltaFromOptimal)}</dd>
         </div>
         <div className="flex justify-between">
-          <dt style={{ color: 'var(--color-muted)' }}>配送時間</dt>
+          <dt style={{ color: 'var(--color-muted)' }}>配送時間 (参考)</dt>
           <dd className="font-mono">
             {formatDeliveryMinutes(estimateDeliveryMinutes(route.distance))}
           </dd>
@@ -425,8 +444,8 @@ interface OutcomeDashboardProps {
   readonly resultStale: boolean;
   readonly staleReason: string;
   readonly totalRoutes: number;
-  readonly outcomeDelta: RouteOutcomeDelta | null;
-  readonly previousRoute: RouteCandidate | null;
+  readonly isNewBest: boolean;
+  readonly expectedDistanceDelta: number | null;
   readonly previousWasComparable: boolean;
 }
 
@@ -436,23 +455,26 @@ function OutcomeDashboard({
   resultStale,
   staleReason,
   totalRoutes,
-  outcomeDelta,
-  previousRoute,
+  isNewBest,
+  expectedDistanceDelta,
   previousWasComparable,
 }: OutcomeDashboardProps) {
-  const top = result?.bestValid ?? null;
   const topAmplification = result?.topAmplification ?? 0;
   const uniformProbability = result?.uniformProbability ?? 0;
-  const deliveryMinutes = top
-    ? estimateDeliveryMinutes(top.distance)
+  const deliveryMinutes = result
+    ? estimateDeliveryMinutes(result.expectedDistance)
     : null;
-  const routeChangedText = outcomeDelta
-    ? outcomeDelta.routeChanged
-      ? '訪問順が変わりました'
-      : '訪問順は同じです'
-    : previousWasComparable
-      ? '最初の実行を待っています'
-      : '交通状況が変わったため前回比較なし';
+  const outcomeText = !previousWasComparable
+    ? '交通状況が変わったため、前回の期待距離とは比較しません。'
+    : expectedDistanceDelta === null
+      ? isNewBest
+        ? '最初の期待距離スコアを記録しました。'
+        : '最初の実行を待っています。'
+      : isNewBest
+        ? `セッションベスト期待距離を更新しました。前回より ${formatDistance(Math.abs(expectedDistanceDelta))} 縮まりました。`
+        : expectedDistanceDelta > 1e-9
+          ? `期待距離は前回より ${formatDistance(expectedDistanceDelta)} 長くなりました。`
+          : '期待距離は前回と同じです。';
 
   return (
     <section
@@ -466,10 +488,10 @@ function OutcomeDashboard({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-semibold" style={{ color: 'var(--color-ink)' }}>
-            今回の成果
+            今回のスコア
           </h2>
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            ルートが同じでも、選ばれやすさが上がれば計算は前に進んでいます。
+            候補全体の距離を選ばれやすさで平均した期待距離。小さいほど良いスコアです。
           </p>
         </div>
         {resultStale && (
@@ -485,42 +507,44 @@ function OutcomeDashboard({
         )}
       </div>
 
-      {top ? (
+      {result ? (
         <>
           <div className="grid gap-3 md:grid-cols-5">
             <MetricCard
-              label="距離"
-              value={formatDistance(top.distance)}
-              detail={`${top.distanceRank}位 / ${totalRoutes}`}
+              label="期待距離スコア"
+              value={formatDistance(result.expectedDistance)}
+              detail="採点対象"
             />
             <MetricCard
-              label="最短との差"
-              value={formatSignedDistance(top.deltaFromOptimal)}
-              detail="0.00 が理論上の最短"
-            />
-            <MetricCard
-              label="配送時間"
-              value={deliveryMinutes ? formatDeliveryMinutes(deliveryMinutes) : '—'}
-              detail="同じ速度で走った場合"
-            />
-            <MetricCard
-              label="確信度"
-              value={`${topAmplification.toFixed(1)}倍`}
-              detail={`平均 ${(uniformProbability * 100).toFixed(2)}% 比`}
-            />
-            <MetricCard
-              label="前回との差"
+              label="前回との期待差"
               value={
-                outcomeDelta
-                  ? formatSignedDistance(outcomeDelta.distanceDelta)
+                expectedDistanceDelta !== null
+                  ? formatSignedDistance(expectedDistanceDelta)
                   : previousWasComparable
                     ? '初回'
                     : '条件変更'
               }
+              detail="マイナスなら改善"
+            />
+            <MetricCard
+              label="期待配送時間 (参考)"
+              value={deliveryMinutes ? formatDeliveryMinutes(deliveryMinutes) : '—'}
+              detail="固定速度で換算"
+            />
+            <MetricCard
+              label="最有力候補の確信度"
+              value={`${topAmplification.toFixed(1)}倍`}
+              detail={`参考・対象外 / 平均 ${(uniformProbability * 100).toFixed(2)}% 比`}
+            />
+            <MetricCard
+              label="今回走った距離"
+              value={
+                sampledRoute ? formatDistance(sampledRoute.distance) : '—'
+              }
               detail={
-                outcomeDelta
-                  ? `${formatSignedAmplification(outcomeDelta.amplificationDelta)}`
-                  : '比較対象なし'
+                sampledRoute
+                  ? `${sampledRoute.distanceRank}位 / ${totalRoutes} (観測)`
+                  : '抽選待ち'
               }
             />
           </div>
@@ -528,36 +552,21 @@ function OutcomeDashboard({
           <div
             className="mt-3 rounded-lg p-3 text-sm"
             style={{
-              background: outcomeDelta?.routeChanged
+              background: isNewBest
                 ? 'oklch(94% 0.03 170 / 0.55)'
                 : 'oklch(96% 0.012 80)',
               color: 'var(--color-ink-soft)',
             }}
           >
-            <strong style={{ color: 'var(--color-ink)' }}>{routeChangedText}</strong>
-            {outcomeDelta && !outcomeDelta.routeChanged && (
-              <span>
-                。今回は距離よりも、1位候補の選ばれやすさが
-                {formatSignedAmplification(outcomeDelta.amplificationDelta)}
-                変わっています。
-              </span>
-            )}
-            {outcomeDelta?.routeChanged && previousRoute && (
-              <div className="mt-2 grid gap-1 text-xs md:grid-cols-2">
-                <div>前回: {describeRouteOrder(previousRoute)}</div>
-                <div>今回: {describeRouteOrder(top)}</div>
-              </div>
-            )}
-            {sampledRoute && !sameRouteForDisplay(sampledRoute, top) && (
-              <p className="mt-2 text-xs">
-                取り出したルートは確率に従って選ばれるため、1位候補と違う場合があります。
-              </p>
-            )}
+            <strong style={{ color: 'var(--color-ink)' }}>{outcomeText}</strong>
+            <p className="mt-2 text-xs">
+              van が走る1本は確率に従って取り出した観測例です。スコアは候補全体の期待距離で評価します。
+            </p>
           </div>
         </>
       ) : (
         <p className="text-sm" style={{ color: 'var(--color-ink-soft)' }}>
-          まだ実行されていません。まず「この設定で実行」を押すと、距離・配送時間・確信度がここに出ます。
+          まだ実行されていません。まず「この設定で実行」を押すと、期待距離スコアと観測ルートがここに出ます。
         </p>
       )}
     </section>
@@ -687,13 +696,4 @@ function paramsKey(params: QaoaParams): string {
 function formatSignedDistance(value: number): string {
   if (Math.abs(value) < 1e-9) return '+0.00 距離pt';
   return `${value > 0 ? '+' : ''}${value.toFixed(2)} 距離pt`;
-}
-
-function formatSignedAmplification(value: number): string {
-  if (Math.abs(value) < 0.05) return '+0.0倍';
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)}倍`;
-}
-
-function sameRouteForDisplay(a: RouteCandidate, b: RouteCandidate): boolean {
-  return a.order.join(',') === b.order.join(',');
 }

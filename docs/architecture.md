@@ -90,6 +90,7 @@ type AttemptRecord = {
   id: string;
   timestamp: number;
   params: QaoaParams;
+  expectedDistance: number;
   bestValid: RouteCandidate | null;
   sampledRoute: RouteCandidate | null;
   isNewBest: boolean;
@@ -101,7 +102,7 @@ type AttemptRecord = {
 
 interface SessionState {
   startedAt: number | null;
-  bestScore: { distance: number; route: number[]; params: QaoaParams; distanceRank: number; trafficProfile: string } | null;
+  bestScore: { expectedDistance: number; sampledRoute: RouteCandidate | null; params: QaoaParams; topAmplification: number; trafficProfile: string } | null;
   history: ReadonlyArray<AttemptRecord>;
 
   startSession(): void;
@@ -168,6 +169,7 @@ export interface RouteCandidate {
 export interface QaoaResult {
   distribution: ReadonlyArray<RouteCandidate>; // probability 降順
   bestValid: RouteCandidate | null;
+  expectedDistance: number;                    // Σ distance × probability
   elapsedMs: number;
   params: QaoaParams;
   trafficProfile: string;
@@ -202,7 +204,7 @@ QaoaResult
 
 - 状態は `{ real: Float64Array; imag: Float64Array }` で長さ `6! = 720`
 - MVP では無効ビット列を作らず、**訪問順だけを並び替える順列ベースの簡易 QAOA**で、すべての表示を有効ルート候補にそろえる
-- `sampleRouteCandidate()` は分布から今回取り出したルートをサンプリングし、セッションベスト判定は `bestValid`（波が推す 1 位候補）の距離で行う
+- `sampleRouteCandidate()` は分布から van が走る観測例をサンプリングする。セッションベスト判定は分布全体の期待距離 `Σ distance × probability` で行い、`bestValid` は波の説明用の参考表示に使う
 
 > **判断**: 真の one-hot QAOA は教育用 MVP には過剰。順列ベースにすることで、「調整中プレビュー」「実行結果」「今回取り出したルート」の表示を 720 個の有効候補だけで説明できる。
 
@@ -374,13 +376,13 @@ export const glossary = {
 4. **QAOA エンジン拡張**
    - `runQaoa()` の戻り値に `probabilityHistory: number[][]` 追加
    - `RouteCandidate` に `distanceRank` / `deltaFromOptimal` 追加
-   - `QaoaResult` に `uniformProbability` / `topAmplification` / `trafficProfile` 追加
+   - `QaoaResult` に `expectedDistance` / `uniformProbability` / `topAmplification` / `trafficProfile` 追加
    - `sampleRouteCandidate()` で「今回取り出したルート」を表現
    - レイヤー毎・位相付け/混ぜそれぞれのスナップショット
 5. **成果表示 + 教育の機構説明**
-   - Challenge 上部に「今回の成果」ダッシュボードを表示
-   - 距離、距離順位、最短との差、配送時間、確信度、前回との差を表示
-   - ルートが同じ場合は「訪問順は同じ、選ばれやすさが変化」と明示
+   - Challenge 上部に期待距離を主スコアとするダッシュボードを表示
+   - 期待距離、前回との期待差、参考の期待配送時間、最有力候補の確信度、今回の観測距離を表示
+   - van の観測ルートと `bestValid`（参考・スコア対象外）を明確に分離
    - `glossary.ts` の `GlossaryEntry.mechanism` 追加
    - `metaphors.ts` の `Metaphor.mechanism` / `goldZone` 追加
    - `SoloSliderStep` に `<details>` 折りたたみの「なぜそうなる？」

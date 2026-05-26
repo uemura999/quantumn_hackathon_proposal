@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import type { QaoaParams, QaoaResult, RouteCandidate } from '@/engine/types';
 
 export interface BestScore {
-  readonly distance: number;
-  readonly route: ReadonlyArray<number>;
+  readonly expectedDistance: number;
+  readonly sampledRoute: RouteCandidate | null;
   readonly params: QaoaParams;
-  readonly distanceRank: number;
+  readonly topAmplification: number;
   readonly trafficProfile: string;
 }
 
@@ -13,6 +13,7 @@ export interface AttemptRecord {
   readonly id: string;
   readonly timestamp: number;
   readonly params: QaoaParams;
+  readonly expectedDistance: number;
   readonly bestValid: RouteCandidate | null;
   readonly sampledRoute: RouteCandidate | null;
   readonly isNewBest: boolean;
@@ -46,23 +47,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   recordAttempt: (result, sampledRoute = null) => {
-    const candidate = result.bestValid;
     const current = get().bestScore;
     const isNewBest =
-      candidate !== null &&
-      (current === null || candidate.distance < current.distance);
-    const comparisonBest = current?.distance ?? candidate?.distance ?? null;
-    const deltaFromBest =
-      candidate !== null && comparisonBest !== null
-        ? candidate.distance - comparisonBest
-        : null;
+      current === null || result.expectedDistance < current.expectedDistance;
+    const comparisonBest = current?.expectedDistance ?? result.expectedDistance;
+    const deltaFromBest = result.expectedDistance - comparisonBest;
 
-    const nextBest: BestScore | null = isNewBest && candidate
+    const nextBest: BestScore | null = isNewBest
       ? {
-          distance: candidate.distance,
-          route: candidate.order,
+          expectedDistance: result.expectedDistance,
+          sampledRoute,
           params: result.params,
-          distanceRank: candidate.distanceRank,
+          topAmplification: result.topAmplification,
           trafficProfile: result.trafficProfile,
         }
       : current;
@@ -71,7 +67,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: Date.now(),
       params: result.params,
-      bestValid: candidate,
+      expectedDistance: result.expectedDistance,
+      bestValid: result.bestValid,
       sampledRoute,
       isNewBest,
       deltaFromBest,
